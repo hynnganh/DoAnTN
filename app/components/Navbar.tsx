@@ -1,22 +1,131 @@
+"use client";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { Menu, Search, ChevronDown, Bell, Ticket, UserCircle } from "lucide-react";
 
 export default function Navbar() {
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 40);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const navItems = [
+    {
+      title: "PHIM",
+      submenu: [
+        { name: "Phim Đang Chiếu", href: "/movies/now" },
+        { name: "Phim Sắp Chiếu", href: "/movies/coming" },      ],
+    },
+    {
+      title: "RẠP A&K",
+      submenu: [
+        { name: "Tất Cả Các Rạp", href: "/cinema" },
+        { name: "Rạp Đặc Biệt (Gold Class)", href: "/cinema/special" },
+        { name: "Rạp 3D / Công Nghệ Mới", href: "/cinema/3d" },
+      ],
+    },
+    {
+      title: "THÀNH VIÊN",
+      submenu: [
+        { name: "Tài Khoản Của Tôi", href: "/auth" },
+        { name: "Quyền Lợi Thành Viên", href: "/quyen-loi" },
+        { name: "Lịch Sử Đặt Vé", href: "/lich-su" },
+      ],
+    },
+    { title: "SỰ KIỆN", href: "/su-kien" },
+  ];
+
   return (
-    <div className="flex justify-between items-center px-10 py-4 bg-white border-b">
-      <h1 className="text-3xl font-bold text-red-600">
-        CGV
-      </h1>
+    <div className="w-full z-[100] relative">
+      {/* --- MAIN NAVBAR --- */}
+      <header
+        className={`w-full transition-all duration-500 ${
+          isScrolled
+            ? "fixed top-0 left-0 bg-black/90 backdrop-blur-xl py-3 shadow-2xl border-b border-white/10"
+            : "relative bg-black py-5"
+        }`}
+      >
+        <div className="max-w-[1440px] mx-auto flex justify-between items-center px-6 md:px-12">
+          
+          {/* Logo Section */}
+          <div className="flex items-center gap-10">
+            <Link href="/" className="flex items-center gap-1 group">
+              <span className="text-4xl font-[1000] text-red-600 tracking-tighter italic transition-transform group-hover:scale-105">
+                A<span className="text-white">&</span>K
+              </span>
+              <span className="text-[10px] text-gray-500 font-black tracking-[0.3em] uppercase mt-2 ml-1">Cinema</span>
+            </Link>
 
-      <nav className="flex gap-10 font-semibold text-black">
-        <Link href="#">PHIM</Link>
-        <Link href="#">RẠP CGV</Link>
-        <Link href="#">THÀNH VIÊN</Link>
-        <Link href="#">CULTUREPLEX</Link>
-      </nav>
+            {/* Desktop Navigation */}
+            <nav className="hidden lg:flex gap-8 ml-4">
+              {navItems.map((item) => (
+                <div key={item.title} className="relative group/menu">
+                  <button className="flex items-center gap-1.5 text-[11px] font-black text-white/70 hover:text-white transition-all tracking-[0.2em] uppercase py-2">
+                    {item.title}
+                    {item.submenu && <ChevronDown size={14} className="group-hover/menu:rotate-180 transition-transform duration-300 text-red-600" />}
+                  </button>
 
-      <button className="bg-red-600 text-white px-4 py-2 rounded">
-        MUA VÉ NGAY
-      </button>
+                  {/* Dropdown Menu */}
+                  {item.submenu && (
+                    <div className="absolute top-full left-0 pt-4 opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all duration-300 translate-y-2 group-hover/menu:translate-y-0 z-[110]">
+                      <div className="bg-[#0f0f0f] border border-white/10 p-5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] min-w-[240px]">
+                        <div className="flex flex-col gap-4">
+                          {item.submenu.map((sub) => (
+                            <Link
+                              key={sub.name}
+                              href={sub.href}
+                              className="text-[10px] font-bold text-gray-400 hover:text-red-500 hover:translate-x-2 transition-all duration-300 uppercase tracking-widest flex items-center gap-3 group/item"
+                            >
+                              <div className="w-1 h-1 bg-red-600 rounded-full scale-0 group-hover/item:scale-100 transition-transform" />
+                              {sub.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </nav>
+          </div>
+
+          {/* Right Actions
+          <div className="flex items-center gap-4 md:gap-8">
+            <div className="hidden md:flex items-center gap-6 border-r border-white/10 pr-8">
+              <button className="text-white/60 hover:text-red-500 transition-colors flex items-center gap-2 group">
+                <Bell size={18} className="group-hover:animate-bounce" />
+                <span className="text-[10px] font-bold uppercase tracking-widest hidden xl:block">Tin mới</span>
+              </button>
+              <button className="text-white/60 hover:text-red-500 transition-colors flex items-center gap-2 group">
+                <Ticket size={18} className="group-hover:rotate-12 transition-transform" />
+                <span className="text-[10px] font-bold uppercase tracking-widest hidden xl:block">Vé của tôi</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-5">
+              <button className="text-white/80 hover:text-red-600 transition-colors">
+                <Search size={22} />
+              </button>
+              <Link href="/auth" className="text-white/80 hover:text-red-600 transition-colors flex items-center gap-2">
+                <UserCircle size={24} />
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Đăng Nhập</span>
+              </Link>
+              <button className="relative bg-red-600 text-white px-6 py-3 rounded-xl font-black text-[11px] tracking-[0.15em] overflow-hidden transition-all shadow-[0_10px_20px_-5px_rgba(220,38,38,0.5)] active:scale-95 uppercase group">
+                <div className="absolute inset-0 w-0 bg-white/20 transition-all duration-300 group-hover:w-full" />
+                <span className="relative">Mua vé ngay</span>
+              </button>
+              <button className="lg:hidden text-white">
+                <Menu size={28} />
+              </button>
+            </div>
+          </div> */}
+        </div>
+      </header>
     </div>
   );
 }
