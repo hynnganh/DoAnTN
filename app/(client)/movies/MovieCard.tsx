@@ -1,6 +1,6 @@
 import React from 'react';
 import { Ticket, Play, Star, Info, Bell, Calendar, Flame } from 'lucide-react';
-
+import Link from 'next/link';
 // Định nghĩa kiểu dữ liệu đồng nhất
 export interface Movie {
   id: number;
@@ -76,9 +76,12 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, type }) => {
             ${isShowing ? 'bg-red-600 text-white hover:bg-white hover:text-black' : 'bg-white text-black hover:bg-blue-600 hover:text-white'}`}>
             <Play size={16} fill="currentColor" /> {isShowing ? 'Trailer' : 'Xem Trailer'}
           </button>
-          <button className="w-full bg-white/10 backdrop-blur-md border border-white/20 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-white/20 transition-all transform translate-y-8 group-hover:translate-y-0 duration-700">
+          <Link 
+            href={`/movies/${movie.id}`} 
+            className="w-full bg-white/10 backdrop-blur-md border border-white/20 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-white/20 transition-all transform translate-y-8 group-hover:translate-y-0 duration-700"
+          >
             <Info size={16} /> Chi Tiết
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -96,10 +99,12 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, type }) => {
           </span>
         </div>
         
-        <h3 className={`text-2xl font-black uppercase tracking-tighter transition-colors leading-[1.1] min-h-[3.5rem] line-clamp-2
-          ${isShowing ? 'group-hover:text-red-500' : 'group-hover:text-blue-500'}`}>
-          {movie.title}
-        </h3>
+        <Link href={`/movies/${movie.id}`}>
+          <h3 className={`text-2xl font-black uppercase tracking-tighter transition-colors leading-[1.1] min-h-[3.5rem] line-clamp-2 cursor-pointer
+            ${isShowing ? 'group-hover:text-red-500' : 'group-hover:text-blue-500'}`}>
+            {movie.title}
+          </h3>
+        </Link>
 
         <div className="pt-2">
           <button className={`w-full relative py-4 bg-white/5 rounded-2xl overflow-hidden transition-all duration-500 border border-white/10 active:scale-95 group/btn shadow-2xl

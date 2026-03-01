@@ -32,12 +32,11 @@ export default function Navbar() {
     {
       title: "THÀNH VIÊN",
       submenu: [
-        { name: "Tài Khoản Của Tôi", href: "/auth" },
-        { name: "Quyền Lợi Thành Viên", href: "/quyen-loi" },
-        { name: "Lịch Sử Đặt Vé", href: "/lich-su" },
+        { name: "Tài Khoản Của Tôi", href: "/profile" },
+        { name: "Quyền Lợi Thành Viên", href: "/membership" },
       ],
     },
-    { title: "SỰ KIỆN", href: "/su-kien" },
+    { title: "SỰ KIỆN", href: "/events" },
   ];
 
   return (
@@ -62,36 +61,49 @@ export default function Navbar() {
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex gap-8 ml-4">
-              {navItems.map((item) => (
-                <div key={item.title} className="relative group/menu">
-                  <button className="flex items-center gap-1.5 text-[11px] font-black text-white/70 hover:text-white transition-all tracking-[0.2em] uppercase py-2">
-                    {item.title}
-                    {item.submenu && <ChevronDown size={14} className="group-hover/menu:rotate-180 transition-transform duration-300 text-red-600" />}
-                  </button>
+            {/* Desktop Navigation */}
+<nav className="hidden lg:flex gap-8 ml-4">
+  {navItems.map((item) => (
+    <div key={item.title} className="relative group/menu">
+      {/* KIỂM TRA SUBMENU ĐỂ RENDER THẺ PHÙ HỢP */}
+      {item.submenu ? (
+        // Nếu có submenu: Dùng button để giữ dropdown
+        <button className="flex items-center gap-1.5 text-[11px] font-black text-white/70 hover:text-white transition-all tracking-[0.2em] uppercase py-2">
+          {item.title}
+          <ChevronDown size={14} className="group-hover/menu:rotate-180 transition-transform duration-300 text-red-600" />
+        </button>
+      ) : (
+        // Nếu KHÔNG có submenu (SỰ KIỆN): Dùng Link để chuyển URL
+        <Link 
+          href={item.href || "#"} 
+          className="flex items-center gap-1.5 text-[11px] font-black text-white/70 hover:text-white transition-all tracking-[0.2em] uppercase py-2"
+        >
+          {item.title}
+        </Link>
+      )}
 
-                  {/* Dropdown Menu */}
-                  {item.submenu && (
-                    <div className="absolute top-full left-0 pt-4 opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all duration-300 translate-y-2 group-hover/menu:translate-y-0 z-[110]">
-                      <div className="bg-[#0f0f0f] border border-white/10 p-5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] min-w-[240px]">
-                        <div className="flex flex-col gap-4">
-                          {item.submenu.map((sub) => (
-                            <Link
-                              key={sub.name}
-                              href={sub.href}
-                              className="text-[10px] font-bold text-gray-400 hover:text-red-500 hover:translate-x-2 transition-all duration-300 uppercase tracking-widest flex items-center gap-3 group/item"
-                            >
-                              <div className="w-1 h-1 bg-red-600 rounded-full scale-0 group-hover/item:scale-100 transition-transform" />
-                              {sub.name}
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+      {/* Dropdown Menu (Chỉ render nếu có submenu) */}
+      {item.submenu && (
+        <div className="absolute top-full left-0 pt-4 opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all duration-300 translate-y-2 group-hover/menu:translate-y-0 z-[110]">
+          <div className="bg-[#0f0f0f] border border-white/10 p-5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] min-w-[240px]">
+            <div className="flex flex-col gap-4">
+              {item.submenu.map((sub) => (
+                <Link
+                  key={sub.name}
+                  href={sub.href}
+                  className="text-[10px] font-bold text-gray-400 hover:text-red-500 hover:translate-x-2 transition-all duration-300 uppercase tracking-widest flex items-center gap-3 group/item"
+                >
+                  <div className="w-1 h-1 bg-red-600 rounded-full scale-0 group-hover/item:scale-100 transition-transform" />
+                  {sub.name}
+                </Link>
               ))}
-            </nav>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  ))}
+</nav>
           </div>
 
           {/* Right Actions

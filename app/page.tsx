@@ -1,6 +1,6 @@
-import Banner from "./components/home/Banner";
-import MovieSection from "./components/home/MovieSection";
-import EventSection from "./components/home/EventSection";
+import Banner from "./(client)/components/home/Banner";
+import MovieSection from "./(client)/components/home/MovieSection";
+import EventSection from "./(client)/components/home/EventSection";
 
 export default function Home() {
   return (

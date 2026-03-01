@@ -9,7 +9,7 @@ export default function TopMenu() {
         
         {/* Tin mới & Ưu đãi */}
         <Link 
-          href="#" 
+          href="/news-offers" 
           className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-xs font-medium uppercase tracking-wider group"
         >
           <Bell size={14} className="group-hover:animate-ring text-red-500" />

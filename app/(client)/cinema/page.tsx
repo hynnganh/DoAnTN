@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useMemo } from 'react';
 import { Search, MapPin, X, Ticket, Clock, Info } from 'lucide-react';
-import BookingModal from '../components/cinema/BookingModal';
+import BookingModal from './components/BookingModal';
 
 // --- 1. DATA NỘI BỘ SÀI GÒN (Mở rộng thêm ví dụ) ---
 const SG_DATA = [

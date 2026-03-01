@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 // Lưu ý: Đảm bảo bạn đã lưu file MovieCard.tsx cùng thư mục
-import MovieCard, { Movie } from '../../components/movie/MovieCard'; 
+import MovieCard, { Movie } from '../MovieCard'; 
 
 const upcomingMovies: Movie[] = [
   { id: 101, title: "CHIẾN BINH CUỐI CÙNG", tag: "T13", image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=800", genre: "Hành Động • Viễn Tưởng", duration: "142 phút", releaseDate: "15/03/2026", isHot: true, isImax: true },

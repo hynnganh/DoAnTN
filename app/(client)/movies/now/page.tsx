@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 // Đảm bảo file MovieCard.tsx nằm cùng thư mục
-import MovieCard, { Movie } from '../../components/movie/MovieCard'; 
+import MovieCard, { Movie } from '../MovieCard'; 
 
 // --- 1. DỮ LIỆU 12-15 BỘ PHIM ĐANG CHIẾU (DATA) ---
 const currentMovies: Movie[] = [
