@@ -23,3 +23,27 @@ input[type='number']::-webkit-outer-spin-button {
 .animate-ken-burns {
   animation: kenburns 10s ease-out infinite alternate;
 }
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.custom-toast {
+  animation: slideUp 0.3s ease-out;
+  background: rgba(12, 12, 12, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(220, 38, 38, 0.1) !important;
+}
+
+.stroke-text {
+  -webkit-text-stroke: 1px rgba(255,255,255,0.2);
+  color: transparent;
+}
+@layer base {
+  .stroke-text {
+    -webkit-text-stroke: 1px rgba(255,255,255,0.1);
+    color: transparent;
+  }
+}
