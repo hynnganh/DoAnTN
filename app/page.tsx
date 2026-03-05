@@ -5,6 +5,7 @@ import TopBanner from "./(client)/components/TopBanner";
 import TopMenu from "./(client)/components/TopMenu";
 import Navbar from "./(client)/components/Navbar";
 import Footer from "./(client)/components/Footer";
+import CinematicUniverse from "./(client)/components/home/CinematicUniverse";
 
 export default function Home() {
   return (
@@ -15,6 +16,7 @@ export default function Home() {
       <Banner />
       <MovieSection />
       <EventSection />
+      <CinematicUniverse />
       <Footer />
     </>
   );

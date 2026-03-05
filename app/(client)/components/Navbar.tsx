@@ -37,6 +37,7 @@ export default function Navbar() {
       ],
     },
     { title: "SỰ KIỆN", href: "/events" },
+    { title: "COMBO Bắp & Nước", href: "/deals" },
   ];
 
   return (

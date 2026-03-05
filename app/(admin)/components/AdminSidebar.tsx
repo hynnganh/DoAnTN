@@ -14,7 +14,6 @@ export default function AdminSidebar() {
     { name: 'Lịch chiếu', icon: Calendar, href: '/admin/showtimes' },
     { name: 'Khách hàng', icon: Users, href: '/admin/users' },
     { name: 'Bắp nước & Combo', icon: Box, href: '/admin/combos' },
-    { name: 'Phân quyền', icon: Shield, href: '/admin/system', isBigAdmin: true },
   ];
 
   return (
@@ -34,7 +33,7 @@ export default function AdminSidebar() {
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                 isActive 
                 ? 'bg-red-600 text-white' 
-                : link.isBigAdmin ? 'text-yellow-500 hover:bg-yellow-500/5' : 'text-zinc-500 hover:bg-white/5 hover:text-white'
+                : 'text-zinc-500 hover:bg-white/5 hover:text-white'
               }`}
             >
               <link.icon size={18} />
