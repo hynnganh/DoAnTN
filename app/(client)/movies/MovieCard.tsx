@@ -1,125 +1,117 @@
+"use client";
 import React from 'react';
-import { Ticket, Play, Star, Info, Bell, Calendar, Flame } from 'lucide-react';
-import Link from 'next/link';
-// Định nghĩa kiểu dữ liệu đồng nhất
-export interface Movie {
-  id: number;
-  title: string;
-  tag: string;
-  image: string;
-  genre: string;
-  duration: string;
-  rating?: number | null;
-  rank?: number | null;
-  isImax?: boolean;
-  isHot?: boolean;
-  releaseDate?: string; // Chỉ dùng cho sắp chiếu
-}
+import Link from "next/link";
+import { Ticket, Star, CalendarDays, Info } from "lucide-react";
 
 interface MovieCardProps {
-  movie: Movie;
-  type: 'showing' | 'upcoming';
+  id: number;
+  title: string;
+  image: string;       // Tương ứng với posterUrl từ API
+  rating?: number | string | null;
+  status?: string;     // "SHOWING" hoặc "COMING_SOON"
 }
 
-const MovieCard: React.FC<MovieCardProps> = ({ movie, type }) => {
-  const isShowing = type === 'showing';
-  const themeColor = isShowing ? 'red' : 'blue';
+export default function MovieCard({ id, title, image, rating, status }: MovieCardProps) {
+  const isShowing = status === "SHOWING";
+
+  // NGHIỆP VỤ RATING: 
+  // - Nếu có rating > 0: Hiển thị số (VD: 8.5)
+  // - Nếu không có hoặc bằng 0: Hiển thị "NEW"
+  const hasRating = rating && Number(rating) > 0;
+  const displayRating = hasRating ? Number(rating).toFixed(1) : "NEW";
+
+  // NGHIỆP VỤ ẢNH LỖI:
+  // Hàm xử lý khi link ảnh từ Database bị 404 hoặc hỏng
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    e.currentTarget.src = "https://placehold.co/400x600?text=A%26K+Cinema";
+  };
 
   return (
-    <div className="group relative flex flex-col">
-      {/* Poster Card */}
-      <div className={`relative aspect-[2/3] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl transition-all duration-700 bg-[#111]
-        ${isShowing ? 'hover:border-red-600/40' : 'hover:border-blue-500/40'} hover:-translate-y-6`}>
-        
-        <img 
-          src={movie.image} 
-          alt={movie.title} 
+    <div className="group relative flex flex-col bg-[#0a0a0a] rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-700 hover:shadow-red-600/10 hover:-translate-y-4 border border-white/5">
+      
+      {/* 1. KHU VỰC POSTER (IMAGE CONTAINER) */}
+      <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-900">
+        <img
+          src={image || "https://placehold.co/400x600?text=Chưa+Có+Poster"}
+          alt={title}
           className={`w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 
-            ${!isShowing && 'grayscale-[0.6] group-hover:grayscale-0'}`}
+            ${!isShowing && 'grayscale-[0.3] group-hover:grayscale-0'}`} // Phim sắp chiếu để hơi mờ xám
+          onError={handleImageError}
+          loading="lazy"
         />
+        
+        {/* Lớp phủ Gradient mượt mà */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-90 transition-opacity duration-500" />
 
-        {/* Badges (Top Left) */}
-        <div className="absolute top-6 left-6 flex flex-col gap-2 z-20">
-          <span className="bg-black/40 backdrop-blur-md text-white font-black px-3 py-1.5 rounded-xl text-[10px] border border-white/10 uppercase tracking-widest shadow-xl">
-            {movie.tag}
+        {/* --- Badge Rating (Top Left) --- */}
+        <div className={`absolute top-4 left-4 flex items-center gap-1.5 backdrop-blur-md px-3 py-1.5 rounded-xl border z-10 
+          ${hasRating ? 'bg-black/40 border-yellow-500/30' : 'bg-red-600 border-red-500/50'}`}>
+          {hasRating && <Star size={12} className="fill-yellow-500 text-yellow-500" />}
+          <span className="text-white text-[11px] font-black tracking-tighter uppercase">
+            {displayRating}
           </span>
-          {movie.isImax && (
-            <span className="bg-blue-600/60 backdrop-blur-md text-white font-black px-3 py-1.5 rounded-xl text-[10px] border border-blue-400/30 italic tracking-widest">
-              IMAX
-            </span>
-          )}
         </div>
 
-        {/* Rating/Hot Badge (Top Right) */}
-        <div className="absolute top-6 right-6 z-20">
-          {isShowing && movie.rating ? (
-            <div className="bg-yellow-500 text-black font-black px-3 py-2 rounded-2xl flex items-center gap-1.5 text-xs shadow-2xl">
-              <Star size={14} fill="currentColor" /> {movie.rating}
-            </div>
-          ) : movie.isHot ? (
-            <div className="bg-red-600 text-white font-black px-3 py-1.5 rounded-xl text-[10px] shadow-lg animate-pulse flex items-center gap-1">
-              <Flame size={12} fill="currentColor" /> HOT
-            </div>
-          ) : null}
-        </div>
-
-        {/* Rank (Chỉ hiện khi Đang chiếu) */}
-        {isShowing && movie.rank && (
-          <div className="absolute -bottom-6 -left-4 text-[14rem] font-black leading-none italic pointer-events-none transition-all duration-700 text-white/5 group-hover:text-red-600/10 custom-shadow-rank">
-            {movie.rank}
+        {/* --- Badge Format (Top Right - Mặc định hiện IMAX cho phim đẹp) --- */}
+        {isShowing && (
+          <div className="absolute top-4 right-4 bg-blue-600/50 backdrop-blur-md border border-blue-400/20 px-2 py-1 rounded-lg z-10">
+            <span className="text-white text-[9px] font-black italic tracking-widest uppercase">IMAX</span>
           </div>
         )}
 
-        {/* Hover Actions */}
-        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-10 gap-4 z-30">
-          <button className={`w-full py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 transition-all transform translate-y-8 group-hover:translate-y-0 duration-500
-            ${isShowing ? 'bg-red-600 text-white hover:bg-white hover:text-black' : 'bg-white text-black hover:bg-blue-600 hover:text-white'}`}>
-            <Play size={16} fill="currentColor" /> {isShowing ? 'Trailer' : 'Xem Trailer'}
-          </button>
-          <Link 
-            href={`/movies/${movie.id}`} 
-            className="w-full bg-white/10 backdrop-blur-md border border-white/20 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-white/20 transition-all transform translate-y-8 group-hover:translate-y-0 duration-700"
-          >
-            <Info size={16} /> Chi Tiết
+        {/* --- Nút Action khi Hover (Chính giữa ảnh) --- */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-6 group-hover:translate-y-0 z-30 px-6 gap-3">
+          <Link href={`/movies/${id}`} className="w-full">
+            <button className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl transition-all active:scale-95
+              ${isShowing ? 'bg-red-600 text-white hover:bg-white hover:text-black' : 'bg-white text-black hover:bg-blue-600 hover:text-white'}`}>
+              {isShowing ? (
+                <>
+                  <Ticket size={18} fill="currentColor" />
+                  Mua Vé Ngay
+                </>
+              ) : (
+                <>
+                  <CalendarDays size={18} />
+                  Thông Tin Phim
+                </>
+              )}
+            </button>
+          </Link>
+          
+          <Link href={`/movies/${id}`} className="w-full">
+            <button className="w-full bg-white/10 backdrop-blur-md border border-white/20 text-white py-3.5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-white/20 transition-all">
+              <Info size={16} /> Chi Tiết
+            </button>
           </Link>
         </div>
       </div>
 
-      {/* Movie Info */}
-      <div className="mt-10 space-y-4 px-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className={`flex items-center gap-2 ${!isShowing && 'text-blue-400'}`}>
-            {!isShowing && <Calendar size={14} />}
-            <span className="text-[10px] font-black tracking-[0.2em] uppercase">
-              {isShowing ? movie.genre : movie.releaseDate}
+      {/* 2. KHU VỰC THÔNG TIN (INFO PANEL) */}
+      <div className="p-6 relative flex-grow flex flex-col justify-between">
+        <div>
+          <h3 className="font-black text-white text-[18px] md:text-[20px] line-clamp-2 group-hover:text-red-500 transition-colors duration-300 uppercase tracking-tighter leading-tight mb-3 cursor-pointer">
+            {title}
+          </h3>
+          
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-zinc-500 text-[10px] uppercase font-black tracking-widest flex items-center gap-2">
+              {!isShowing && <CalendarDays size={12} className="text-blue-500" />}
+              {isShowing ? "Hành Động • Kinh Dị" : "Khởi chiếu: Sớm"}
+            </span>
+            
+            {/* Tag giới hạn độ tuổi */}
+            <span className={`text-[10px] font-black border px-2 py-0.5 rounded italic 
+              ${isShowing ? 'text-red-500 border-red-500/40' : 'text-blue-400 border-blue-400/40'}`}>
+              {isShowing ? "T18" : "P"}
             </span>
           </div>
-          <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">
-            {movie.duration}
-          </span>
         </div>
-        
-        <Link href={`/movies/${movie.id}`}>
-          <h3 className={`text-2xl font-black uppercase tracking-tighter transition-colors leading-[1.1] min-h-[3.5rem] line-clamp-2 cursor-pointer
-            ${isShowing ? 'group-hover:text-red-500' : 'group-hover:text-blue-500'}`}>
-            {movie.title}
-          </h3>
-        </Link>
 
-        <div className="pt-2">
-          <button className={`w-full relative py-4 bg-white/5 rounded-2xl overflow-hidden transition-all duration-500 border border-white/10 active:scale-95 group/btn shadow-2xl
-            ${isShowing ? 'hover:bg-red-600 hover:border-red-600' : 'hover:bg-blue-600 hover:border-blue-600'}`}>
-            <span className="relative z-10 flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-[0.3em] transition-colors">
-              {isShowing ? 'MUA VÉ NGAY' : 'NHẬN THÔNG BÁO'} 
-              {isShowing ? <Ticket size={18} /> : <Bell size={18} />}
-            </span>
-            <div className={`absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full skew-x-12
-              ${isShowing ? 'group-hover/btn:animate-shimmer-red' : 'group-hover/btn:animate-shimmer-blue'}`}></div>
-          </button>
-        </div>
+        {/* Line hiệu ứng thẩm mỹ ở chân Card */}
+        <div className={`h-[2px] w-0 transition-all duration-700 group-hover:w-full 
+          ${isShowing ? 'bg-red-600' : 'bg-blue-600'}`} />
       </div>
+
     </div>
   );
-};
-
-export default MovieCard;
+}

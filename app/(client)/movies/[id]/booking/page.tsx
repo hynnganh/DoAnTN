@@ -1,112 +1,177 @@
 "use client";
-import React, { useState } from 'react';
-import { Calendar, MapPin, ChevronLeft } from 'lucide-react';
+import React, { useState, useEffect, use } from 'react';
+import { Calendar, MapPin, ChevronLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-// Import BookingModal bạn đã cung cấp
+import { apiRequest } from "../../../../lib/api"; 
 import BookingModal from '@/app/(client)/cinema/components/BookingModal'; 
 
-export default function MovieBookingPage({ params }: { params: { id: string } }) {
-  // State quản lý việc mở Modal và truyền thông tin vào Modal
+export default function MovieBookingPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
+  const movieId = resolvedParams.id;
+
+  const [movie, setMovie] = useState<any>(null);
+  const [showtimes, setShowtimes] = useState<any[]>([]); 
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [bookingInfo, setBookingInfo] = useState<any>(null);
 
-  // Giả lập dữ liệu phim (Thực tế sẽ fetch theo params.id)
-  const movie = {
-    id: params.id,
-    title: "AVATAR: THE SEED BEARER",
-    image: "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=1000",
+  // FIX 1: Tránh lỗi Hydration bằng cách set ngày trong useEffect
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    setSelectedDate(today);
+    fetchMovieDetail();
+  }, [movieId]);
+
+  useEffect(() => {
+    if (selectedDate) fetchShowtimes();
+  }, [selectedDate, movieId]);
+
+  const fetchMovieDetail = async () => {
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/movies/${movieId}`);
+      const resData = await res.json();
+      if (res.ok) setMovie(resData.data);
+    } catch (error) { console.error("Lỗi phim:", error); }
   };
 
-  const handleSelectShowtime = (time: string, cinema: string) => {
-    // Khi nhấn vào giờ, ta set object info để Modal hiện lên
-    setBookingInfo({
-      ...movie,
-      time: time,
-      cinema: cinema,
-      date: "01/03/2026"
-    });
+  const fetchShowtimes = async () => {
+    setLoading(true);
+    try {
+      // FIX 2: Dùng fetch thuần để test cho chắc (tránh logic Token của apiRequest gây 403)
+      const res = await fetch(`http://localhost:8080/api/v1/showtimes/movie/${movieId}?date=${selectedDate}`);
+      
+      if (!res.ok) {
+        setShowtimes([]);
+        return;
+      }
+      
+      const resData = await res.json();
+      setShowtimes(resData.data || []);
+    } catch (error) { 
+      console.error("Lỗi suất chiếu:", error); 
+      setShowtimes([]);
+    } finally { setLoading(false); }
+  };
+
+  // FIX 3: Grouping an toàn hơn, tránh crash khi dữ liệu null
+  const groupedShowtimes = showtimes.reduce((acc: any, st: any) => {
+    const cinemaName = st.cinemaItem?.name || st.room?.cinemaItem?.name || "Rạp A&K Cinema"; 
+    if (!acc[cinemaName]) acc[cinemaName] = [];
+    acc[cinemaName].push(st);
+    return acc;
+  }, {});
+
+  const getDays = () => {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() + i);
+      const fullDate = date.toISOString().split('T')[0];
+      days.push({
+        fullDate,
+        displayDate: date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+        dayName: i === 0 ? "HÔM NAY" : date.toLocaleDateString('vi-VN', { weekday: 'short' }).toUpperCase()
+      });
+    }
+    return days;
+  };
+
+  const formatTime = (dateTimeStr: string) => {
+    if (!dateTimeStr) return "00:00";
+    // Tách lấy phần HH:mm từ chuỗi YYYY-MM-DDTHH:mm:ss
+    const parts = dateTimeStr.split('T');
+    return parts[1] ? parts[1].substring(0, 5) : "00:00";
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white pt-10 pb-20 px-6">
-      <div className="max-w-6xl mx-auto space-y-12">
+    <div className="min-h-screen bg-[#050505] text-white pt-10 pb-20 px-6 font-sans">
+      <div className="max-w-7xl mx-auto space-y-12">
         
-        {/* Breadcrumb */}
-        <Link href={`/movies/${params.id}`} className="group flex items-center gap-2 text-zinc-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest">
+        <Link href={`/movies/${movieId}`} className="group flex items-center gap-2 text-zinc-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest">
           <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
           Quay lại thông tin phim
         </Link>
 
-        <header className="space-y-4 animate-in fade-in slide-in-from-top duration-700">
+        <header className="space-y-4">
           <h1 className="text-4xl md:text-7xl font-[1000] italic uppercase tracking-tighter leading-none">
-            Lịch chiếu: <span className="text-red-600">{movie.title}</span>
+            Lịch chiếu: <span className="text-red-600">{movie?.title}</span>
           </h1>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* CỘT TRÁI: CHỌN SUẤT CHIẾU */}
           <div className="lg:col-span-2 space-y-12">
             
-            {/* Chọn Ngày */}
             <section className="space-y-6">
               <h3 className="flex items-center gap-3 text-[10px] font-black uppercase text-zinc-500 tracking-[0.3em]">
                 <Calendar size={16} className="text-red-600" /> 01. Chọn ngày xem
               </h3>
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                {["01/03", "02/03", "03/03"].map((date, idx) => (
-                  <button key={idx} className={`px-8 py-5 rounded-2xl border font-black text-[11px] transition-all ${idx === 0 ? 'bg-red-600 border-red-600 shadow-xl' : 'bg-white/5 border-white/10 text-zinc-400'}`}>
-                    THỨ {idx + 2}, {date}
+                {getDays().map((day) => (
+                  <button key={day.fullDate} onClick={() => setSelectedDate(day.fullDate)}
+                    className={`px-8 py-5 rounded-[2rem] border font-black text-[11px] transition-all shrink-0 ${
+                      selectedDate === day.fullDate ? 'bg-red-600 border-red-600 shadow-xl scale-105 text-white' : 'bg-white/5 border-white/10 text-zinc-400 hover:border-white/30'
+                    }`}>
+                    <div className="text-[9px] opacity-70 mb-1">{day.dayName}</div>
+                    {day.displayDate}
                   </button>
                 ))}
               </div>
             </section>
 
-            {/* Chọn Rạp & Giờ */}
             <section className="space-y-8">
               <h3 className="flex items-center gap-3 text-[10px] font-black uppercase text-zinc-500 tracking-[0.3em]">
-                <MapPin size={16} className="text-red-600" /> 02. Chọn cụm rạp & suất chiếu
+                <MapPin size={16} className="text-red-600" /> 02. Cụm rạp & Suất chiếu
               </h3>
 
-              {["A&K Cinema Thủ Đức", "A&K Cinema Quận 1"].map((cinema, cIdx) => (
-                <div key={cinema} className="bg-zinc-900/20 border border-white/5 rounded-[3rem] p-8 md:p-10 space-y-8 animate-in fade-in slide-in-from-bottom duration-500" style={{animationDelay: `${cIdx * 100}ms`}}>
-                  <h4 className="text-xl md:text-2xl font-[1000] italic uppercase tracking-tight">{cinema}</h4>
-                  <div className="flex flex-wrap gap-4">
-                    {["10:15", "13:30", "16:45", "19:00", "21:30"].map(time => (
-                      <button 
-                        key={time}
-                        onClick={() => handleSelectShowtime(time, cinema)}
-                        className="px-8 py-4 bg-zinc-900/60 border border-white/5 rounded-2xl text-xs font-[1000] hover:bg-red-600 hover:border-red-600 transition-all uppercase italic tracking-[0.2em] active:scale-90"
-                      >
-                        {time}
-                      </button>
-                    ))}
+              {loading ? (
+                <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-red-600" /></div>
+              ) : Object.keys(groupedShowtimes).length > 0 ? (
+                Object.entries(groupedShowtimes).map(([cinemaName, times]: any) => (
+                  <div key={cinemaName} className="bg-zinc-900/20 border border-white/5 rounded-[3rem] p-8 md:p-10 space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                    <h4 className="text-xl md:text-2xl font-[1000] italic uppercase tracking-tight text-white">{cinemaName}</h4>
+                    <div className="flex flex-wrap gap-4">
+                      {times.map((st: any) => (
+                        <button key={st.id}
+                          onClick={() => setBookingInfo({
+                            showtimeId: st.id,
+                            roomId: st.room?.id,
+                            title: movie?.title,
+                            image: movie?.posterUrl,
+                            time: formatTime(st.startTime),
+                            cinema: cinemaName,
+                            date: selectedDate
+                          })}
+                          className="px-8 py-4 bg-zinc-900/60 border border-white/5 rounded-2xl text-xs font-black hover:bg-white hover:text-black transition-all uppercase italic tracking-[0.2em] active:scale-95"
+                        >
+                          {formatTime(st.startTime)}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="py-20 text-center border border-dashed border-white/10 rounded-[3rem]">
+                  <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">
+                    Không có suất chiếu cho ngày {selectedDate}
+                  </p>
                 </div>
-              ))}
+              )}
             </section>
           </div>
 
-          {/* CỘT PHẢI: POSTER TÓM TẮT */}
           <aside className="hidden lg:block">
-            <div className="sticky top-32 bg-zinc-900/20 border border-white/5 rounded-[3rem] p-10 space-y-8">
-               <div className="aspect-[2/3] rounded-[2rem] overflow-hidden border border-white/10">
-                  <img src={movie.image} className="w-full h-full object-cover" alt="" />
-               </div>
-               <div className="text-center space-y-2">
-                  <p className="text-[10px] font-black text-red-600 uppercase tracking-[0.4em]">Đang đặt vé</p>
-                  <h5 className="text-xl font-black uppercase italic tracking-tighter">{movie.title}</h5>
-               </div>
+            <div className="sticky top-32 bg-zinc-900/20 border border-white/5 rounded-[3rem] p-10 space-y-8 text-center">
+              <div className="aspect-[2/3] rounded-[2rem] overflow-hidden border border-white/10">
+                {movie?.posterUrl && <img src={movie.posterUrl} className="w-full h-full object-cover" alt="poster" />}
+              </div>
+              <h5 className="text-xl font-black uppercase italic tracking-tighter leading-tight">{movie?.title}</h5>
             </div>
           </aside>
         </div>
       </div>
 
-      {/* --- REUSE BOOKING MODAL --- */}
-      {/* Khi bookingInfo có dữ liệu, Modal sẽ hiện lên với flow: Chọn ghế -> Thanh toán -> Success */}
       {bookingInfo && (
-        <BookingModal 
-          info={bookingInfo} 
-          onClose={() => setBookingInfo(null)} 
-        />
+        <BookingModal info={bookingInfo} onClose={() => setBookingInfo(null)} />
       )}
     </div>
   );

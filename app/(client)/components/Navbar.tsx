@@ -106,37 +106,6 @@ export default function Navbar() {
   ))}
 </nav>
           </div>
-
-          {/* Right Actions
-          <div className="flex items-center gap-4 md:gap-8">
-            <div className="hidden md:flex items-center gap-6 border-r border-white/10 pr-8">
-              <button className="text-white/60 hover:text-red-500 transition-colors flex items-center gap-2 group">
-                <Bell size={18} className="group-hover:animate-bounce" />
-                <span className="text-[10px] font-bold uppercase tracking-widest hidden xl:block">Tin mới</span>
-              </button>
-              <button className="text-white/60 hover:text-red-500 transition-colors flex items-center gap-2 group">
-                <Ticket size={18} className="group-hover:rotate-12 transition-transform" />
-                <span className="text-[10px] font-bold uppercase tracking-widest hidden xl:block">Vé của tôi</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-5">
-              <button className="text-white/80 hover:text-red-600 transition-colors">
-                <Search size={22} />
-              </button>
-              <Link href="/auth" className="text-white/80 hover:text-red-600 transition-colors flex items-center gap-2">
-                <UserCircle size={24} />
-                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Đăng Nhập</span>
-              </Link>
-              <button className="relative bg-red-600 text-white px-6 py-3 rounded-xl font-black text-[11px] tracking-[0.15em] overflow-hidden transition-all shadow-[0_10px_20px_-5px_rgba(220,38,38,0.5)] active:scale-95 uppercase group">
-                <div className="absolute inset-0 w-0 bg-white/20 transition-all duration-300 group-hover:w-full" />
-                <span className="relative">Mua vé ngay</span>
-              </button>
-              <button className="lg:hidden text-white">
-                <Menu size={28} />
-              </button>
-            </div>
-          </div> */}
         </div>
       </header>
     </div>
