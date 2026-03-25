@@ -7,8 +7,8 @@ const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: any) => {
   const imgRef = useRef<HTMLDivElement>(null);
 
   // Cấu hình: 10 hàng, mỗi hàng 14 ghế (Dễ dàng thay đổi)
-  const ROWS_CONFIG = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
-  const SEATS_PER_ROW = 14;
+  const ROWS_CONFIG = ['A', 'B', 'C', 'D', 'E', 'F'];
+  const SEATS_PER_ROW = 10;
 
   const onUpdate = ({ x, y, scale }: any) => {
     if (imgRef.current) {
@@ -26,11 +26,11 @@ const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: any) => {
       >
         <div 
           ref={imgRef} 
-          className="p-10 md:p-24 inline-block min-w-full text-center origin-center transition-all duration-75"
+          className="p-10 md:p-2 inline-block min-w-full text-center origin-center transition-all duration-75"
           style={{ touchAction: 'none' }} 
         >
           {/* Màn hình Cinema */}
-          <div className="max-w-xs mx-auto mb-16 opacity-30">
+          <div className="max-w-xs mx-auto mb-5 opacity-30">
             <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-red-600 to-transparent shadow-[0_0_15px_red]"></div>
             <p className="text-[10px] text-center text-red-600 font-black uppercase mt-2 tracking-[1.5em]">Màn hình</p>
           </div>
@@ -52,7 +52,7 @@ const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: any) => {
 
                   const isOccupied = !!occupiedSeat;
                   const isSelected = selectedSeats.some((s: any) => s.seatLabel === seatLabel);
-                  const isVip = ['E', 'F', 'G', 'H'].includes(rowName);
+                  const isVip = ['E', 'F'].includes(rowName);
 
                   return (
                     <button
@@ -80,7 +80,7 @@ const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: any) => {
           </div>
 
           {/* Chú thích trạng thái */}
-          <div className="mt-12 flex flex-wrap justify-center gap-4 opacity-50">
+          <div className="mt-5 flex flex-wrap justify-center gap-4 opacity-50">
              {[
                { label: 'Thường', cls: 'bg-zinc-900 border-zinc-800' },
                { label: 'VIP', cls: 'border-amber-500/50 text-amber-500' },
