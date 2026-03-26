@@ -30,19 +30,15 @@ export default function SuperDashboard() {
 
         // 2. CỘNG TRỪ NHÂN CHIA TẠI ĐÂY
         
-        // Tính tổng doanh thu (Cộng dồn price của tất cả vé)
         const totalRev = tickets.data.reduce((sum: number, t: any) => sum + t.price, 0);
         
-        // Tính tổng vé đã bán
         const totalTix = tickets.data.length;
 
-        // Tính tỷ lệ lấp đầy (Giả định: số vé bán / (tổng số ghế * số suất chiếu))
-        // Đây là công thức nhân chia tận dụng dữ liệu:
-        const totalSeatsAvailable = 10000; // Con số giả định tổng ghế hệ thống
+        const totalSeatsAvailable = 10000; 
         const occRate = ((totalTix / totalSeatsAvailable) * 100).toFixed(1);
 
         setStats({
-          totalRevenue: totalRev / 1000000000, // Đổi sang đơn vị Tỷ VNĐ
+          totalRevenue: totalRev / 1000000000, 
           totalTickets: totalTix,
           activeMovies: movies.data.length,
           occupancyRate: Number(occRate),

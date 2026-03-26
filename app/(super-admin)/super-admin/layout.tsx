@@ -3,28 +3,27 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Film, Users, MapPin, 
   Settings, ShieldCheck, LogOut, Bell, 
-  Search, Menu, X, Zap, Calendar, BarChart3, Fingerprint
+  Search, Menu, X, Zap, Calendar, BarChart3, Fingerprint, MessageSquare,Clock, Tag, Ticket
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
+import Cookies from 'js-cookie';
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
-  const [adminInfo, setAdminInfo] = useState<any>(null); // Thông tin Admin
-  const [cinemaStats, setCinemaStats] = useState<any[]>([]); // Trạng thái rạp thật
+  const [adminInfo, setAdminInfo] = useState<any>(null); 
+  const [cinemaStats, setCinemaStats] = useState<any[]>([]); 
   const pathname = usePathname();
   const router = useRouter();
 
-  // 1. Fetch thông tin Admin & Trạng thái rạp khi Component mount
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
-        router.push('/super-admin/login');
+        router.push('/login');
         return;
       }
 
       try {
-        // Fetch Admin Info (Sử dụng lại API /me bà đã có)
         const adminRes = await fetch('http://localhost:8080/api/v1/users/me', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -33,13 +32,12 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           setAdminInfo(data.data);
         }
 
-        // Fetch Trạng thái rạp (Giả định endpoint lấy stats)
         const statsRes = await fetch('http://localhost:8080/api/v1/cinemas/stats', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (statsRes.ok) {
           const statsData = await statsRes.json();
-          setCinemaStats(statsData.data); // Mảng các rạp kèm % lấp đầy
+          setCinemaStats(statsData.data); 
         }
       } catch (error) {
         console.error("Lỗi fetch dữ liệu hệ thống:", error);
@@ -49,25 +47,27 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     fetchData();
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    router.push('/login');
-  };
+const handleLogout = () => {
+  localStorage.clear(); 
+  Cookies.remove('token'); 
+  Cookies.remove('role');
+  router.push('/login');
+};
 
   const MENU_ITEMS = [
     { label: "Tổng quan", icon: <LayoutDashboard size={20} />, href: "/super-admin" },
     { label: "Phim ảnh", icon: <Film size={20} />, href: "/super-admin/movie" },
+    { label: "Lịch chiếu", icon: <Clock size={20} />, href: "/super-admin/showtime" },
     { label: "Hệ thống rạp", icon: <MapPin size={20} />, href: "/super-admin/cinema" },
     { label: "Người dùng", icon: <Users size={20} />, href: "/super-admin/user" },
-    { label: "Giá vé", icon: <Calendar size={20} />, href: "/super-admin/ticket" },
-    { label: "Thống kê", icon: <BarChart3 size={20} />, href: "/super-admin/analytics" },
-    { label: "Cài đặt", icon: <Settings size={20} />, href: "/super-admin/settings" },
-  ];
+    { label: "Phân quyền", icon: <ShieldCheck size={20} />, href: "/super-admin/role" },
+    { label: "Giá vé & Ghế", icon: <Ticket size={20} />, href: "/super-admin/ticket" },
+    { label: "Thống kê", icon: <BarChart3 size={20} />, href: "/super-admin/analytic" },
+];
 
   return (
     <div className="min-h-screen bg-[#08080a] text-zinc-400 flex font-sans">
       
-      {/* 1. SIDEBAR */}
       <aside className={`h-screen sticky top-0 transition-all duration-500 flex flex-col items-center py-8 border-r border-white/5 bg-black/20 backdrop-blur-xl ${isSidebarOpen ? 'w-64' : 'w-24'}`}>
         <div className="mb-12 flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-tr from-red-600 to-rose-400 rounded-xl flex items-center justify-center text-white shadow-lg">
@@ -101,7 +101,6 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         </div>
       </aside>
 
-      {/* 2. MAIN AREA */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-20 px-8 flex items-center justify-between border-b border-white/5 bg-black/10 backdrop-blur-md sticky top-0 z-30">
           <div className="flex items-center gap-4 flex-1">
@@ -117,7 +116,6 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
               <div className="text-right">
-                {/* DỮ LIỆU THẬT: Tên Admin */}
                 <p className="text-xs font-bold text-white leading-none">
                     {adminInfo ? `${adminInfo.firstName} ${adminInfo.lastName}` : "Đang tải..."}
                 </p>
@@ -138,7 +136,6 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         </main>
       </div>
 
-      {/* 3. RIGHT PANEL - TRẠNG THÁI RẠP THẬT */}
       <aside className="hidden xl:flex w-80 h-screen border-l border-white/5 bg-black/20 backdrop-blur-xl sticky top-0 p-8 flex-col gap-8">
         <div>
           <h3 className="text-white font-bold text-sm mb-6 flex items-center justify-between">

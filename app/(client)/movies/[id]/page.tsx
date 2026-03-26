@@ -104,9 +104,19 @@ export default function MovieDetailPage({ params }: { params: Promise<{ id: stri
               </div>
 
               <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-4">
-                <Link href={`${movieId}/booking/`} className="flex items-center gap-3 px-10 py-5 bg-red-600 rounded-[2rem] text-[12px] font-black uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all shadow-2xl active:scale-95 group">
-                   ĐẶT VÉ NGAY <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                </Link>
+                {movie.status === "SHOWING" ? (
+    <Link 
+      href={`${movieId}/booking/`} 
+      className="flex items-center gap-3 px-10 py-5 bg-red-600 rounded-[2rem] text-[12px] font-black uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all shadow-2xl active:scale-95 group"
+    >
+      ĐẶT VÉ NGAY <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+    </Link>
+  ) : (
+    /* Hiển thị nút thay thế cho phim sắp chiếu */
+    <div className="flex items-center gap-3 px-10 py-5 bg-zinc-800/50 cursor-not-allowed border border-white/5 rounded-[2rem] text-[12px] font-black uppercase tracking-[0.2em] text-zinc-500">
+      CHƯA MỞ BÁN VÉ
+    </div>
+  )}
                 <button className="flex items-center gap-3 px-8 py-5 bg-white/5 backdrop-blur-md border border-white/10 rounded-[2rem] text-[12px] font-black uppercase tracking-[0.2em] hover:bg-white/10 transition-all">
                   <Play size={20} fill="currentColor" /> TRAILER
                 </button>
