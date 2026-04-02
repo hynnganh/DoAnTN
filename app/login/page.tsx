@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Lock, Mail, Eye, EyeOff, Film, Loader2, ArrowRight, Ticket } from 'lucide-react'; // Thay User bằng Mail
 import toast, { Toaster } from 'react-hot-toast';
 import Cookies from 'js-cookie';
+import { apiRequest } from '../lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
-    email: '', // Đã đổi từ username -> email
+    email: '', 
     password: ''
   });
 
@@ -21,11 +22,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8080/api/v1/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData) // Sẽ gửi { email, password }
-      });
+      const res = await apiRequest('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(formData)
+    });
 
       const result = await res.json();
 
@@ -39,10 +39,10 @@ export default function LoginPage() {
         let targetPath = '/';
         let primaryRole = 'USER';
 
-        if (roles.includes('ROLE_SUPER_ADMIN')) {
+        if (roles.includes('SUPER_ADMIN')) {
           targetPath = '/super-admin';
           primaryRole = 'SUPER_ADMIN';
-        } else if (roles.includes('ROLE_ADMIN')) {
+        } else if (roles.includes('ADMIN')) {
           targetPath = '/admin';
           primaryRole = 'ADMIN';
         } else {

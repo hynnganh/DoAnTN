@@ -27,31 +27,34 @@ export default function MovieBookingPage({ params }: { params: Promise<{ id: str
   }, [selectedDate, movieId]);
 
   const fetchMovieDetail = async () => {
-    try {
-      const res = await fetch(`http://localhost:8080/api/v1/movies/${movieId}`);
-      const resData = await res.json();
-      if (res.ok) setMovie(resData.data);
-    } catch (error) { console.error("Lỗi phim:", error); }
-  };
+  try {
+    const res = await apiRequest(`/api/v1/movies/${movieId}`);
+    const resData = await res.json();
+    if (res.ok) setMovie(resData.data);
+  } catch (error) {
+    console.error("Lỗi phim:", error);
+  }
+};
 
-  const fetchShowtimes = async () => {
-    setLoading(true);
-    try {
-      // FIX 2: Dùng fetch thuần để test cho chắc (tránh logic Token của apiRequest gây 403)
-      const res = await fetch(`http://localhost:8080/api/v1/showtimes/movie/${movieId}?date=${selectedDate}`);
-      
-      if (!res.ok) {
-        setShowtimes([]);
-        return;
-      }
-      
-      const resData = await res.json();
-      setShowtimes(resData.data || []);
-    } catch (error) { 
-      console.error("Lỗi suất chiếu:", error); 
+const fetchShowtimes = async () => {
+  setLoading(true);
+  try {
+    const res = await apiRequest(`/api/v1/showtimes/movie/${movieId}?date=${selectedDate}`);
+
+    if (!res.ok) {
       setShowtimes([]);
-    } finally { setLoading(false); }
-  };
+      return;
+    }
+
+    const resData = await res.json();
+    setShowtimes(resData.data || []);
+  } catch (error) {
+    console.error("Lỗi suất chiếu:", error);
+    setShowtimes([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // FIX 3: Grouping an toàn hơn, tránh crash khi dữ liệu null
   const groupedShowtimes = showtimes.reduce((acc: any, st: any) => {

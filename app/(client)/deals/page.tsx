@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Plus, HandCoins, Loader2, Sparkles } from 'lucide-react';
+import { apiRequest } from '../../lib/api';
 
 export default function ComboDealsSection() {
   const [combos, setCombos] = useState<any[]>([]);
@@ -8,16 +9,16 @@ export default function ComboDealsSection() {
 
   useEffect(() => {
     const fetchCombos = async () => {
-      try {
-        const res = await fetch('http://localhost:8080/api/v1/combos');
-        const resData = await res.json();
-        if (res.ok) setCombos(resData.data || []);
-      } catch (error) {
-        console.error("Lỗi lấy combo:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  try {
+    const res = await apiRequest('/api/v1/combos');
+    const resData = await res.json();
+    if (res.ok) setCombos(resData.data || []);
+  } catch (error) {
+    console.error("Lỗi lấy combo:", error);
+  } finally {
+    setLoading(false);
+  }
+};
     fetchCombos();
   }, []);
 

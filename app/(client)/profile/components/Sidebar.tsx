@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Ticket, CreditCard, Heart, Settings, LogOut, Camera, Loader2, Crown } from 'lucide-react';
 import Cookies from 'js-cookie';
+import { apiRequest } from '@/app/lib/api';
 
 const menuItems = [
   { id: 'info', label: 'Hồ sơ cá nhân', icon: User },
@@ -27,12 +28,7 @@ export default function UserSidebar({ activeTab, setActiveTab }: any) {
             return;
         }
 
-        const res = await fetch('http://localhost:8080/api/v1/users/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
+        const res = await apiRequest('/api/v1/users/me');
 
         if (res.ok) {
           const result = await res.json();

@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import toast, { Toaster } from 'react-hot-toast';
 import { apiRequest } from "../../lib/api";
 
-// --- QUÊN MẬT KHẨU COMPONENT ---
 const ForgotPasswordView = ({ onBack }: any) => {
   const [isSent, setIsSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -54,7 +53,6 @@ const ForgotPasswordView = ({ onBack }: any) => {
   );
 };
 
-// --- MAIN AUTH PAGE ---
 export default function AuthPage() {
   const [view, setView] = useState<'login' | 'register' | 'forgot'>('login');
   const [showPass, setShowPass] = useState(false);

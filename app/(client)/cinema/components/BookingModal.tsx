@@ -3,11 +3,22 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { X, Check, Clock, AlertCircle } from 'lucide-react';
 import SeatMap from './SeatMap';
 import PaymentView from './PaymentView';
+import { apiRequest } from '@/app/lib/api'; // Import hàm apiRequest của bà
+
+// Định nghĩa chuẩn Type để đồng bộ dữ liệu giữa các Component
+export interface SeatType {
+  id: number;
+  seatRow: string;
+  seatNumber: string;
+  seatLabel: string;
+  price: number;
+  status?: string;
+}
 
 export default function BookingModal({ info, onClose }: any) {
   const [step, setStep] = useState(1); 
-  const [selectedSeats, setSelectedSeats] = useState<any[]>([]);
-  const [dbSeats, setDbSeats] = useState<any[]>([]);
+  const [selectedSeats, setSelectedSeats] = useState<SeatType[]>([]);
+  const [dbSeats, setDbSeats] = useState<SeatType[]>([]);
   const [timeLeft, setTimeLeft] = useState(300);
   const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -19,19 +30,14 @@ export default function BookingModal({ info, onClose }: any) {
     setTimeout(() => setToast(null), 2500);
   };
 
-  const getToken = () => localStorage.getItem('token') || localStorage.getItem('accessToken');
-
-  // 1. FETCH GHẾ ĐÃ BÁN TỪ SQL
+  // 1. FETCH DỮ LIỆU GHẾ - SỬ DỤNG apiRequest
   useEffect(() => {
     const fetchSeats = async () => {
-      const token = getToken();
       try {
-        const res = await fetch(`http://localhost:8080/api/v1/seats/room/${info.roomId}`, {
-          headers: { 'Authorization': token ? `Bearer ${token}` : '' }
-        });
+        const res = await apiRequest(`/api/v1/seats/room/${info.roomId}`);
         if (res.ok) {
           const result = await res.json();
-          setDbSeats(result.data || []); // Giả sử backend trả về mảng ghế đã đặt
+          setDbSeats(result.data || []);
         }
       } catch (err) {
         console.error("Lỗi fetch ghế:", err);
@@ -40,56 +46,84 @@ export default function BookingModal({ info, onClose }: any) {
     if (info?.roomId) fetchSeats();
   }, [info.roomId]);
 
-  // 2. LOGIC LƯU ĐƠN HÀNG VÀO SQL
-  const handleConfirmBooking = async () => {
-  if (selectedSeats.length === 0) return;
-  setLoading(true);
-  const token = getToken();
+  // 2. NGHIỆP VỤ CHỌN/HỦY & CHẶN GHẾ TRỐNG
+  const toggleSeat = useCallback((seat: SeatType) => {
+    setSelectedSeats((prev) => {
+      const isExist = prev.find((s) => s.id === seat.id);
+      if (isExist) return prev.filter((s) => s.id !== seat.id);
 
-  // 1. Dữ liệu gửi lên phải khớp với OrderRequest của bà
-  const orderRequest = {
-    showtimeId: info.id, // Nhớ check xem bên DTO Java đặt là showtimeId hay showtime_id
-    seatIds: selectedSeats.map(s => s.id), // Hoặc s.seatLabel tùy DTO bà viết
-    totalPrice: totalAmount
-  };
+      if (prev.length >= 8) {
+        showToast("Tối đa 8 ghế mỗi đơn hàng!");
+        return prev;
+      }
 
-  try {
-    // BƯỚC 1: TẠO ĐƠN HÀNG (Order)
-    const orderRes = await fetch(`http://localhost:8080/api/v1/orders`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}` // Thiếu cái này là dính 403 ngay
-      },
-      body: JSON.stringify(orderRequest)
+      const rowName = seat.seatRow;
+      const seatNum = parseInt(seat.seatNumber);
+      
+      const occupiedInRow = dbSeats.filter((s) => s.seatRow === rowName && (s.status === 'OCCUPIED' || !s.status)).map((s) => parseInt(s.seatNumber));
+      const selectingInRow = prev.filter((s) => s.seatRow === rowName).map((s) => parseInt(s.seatNumber));
+      const allTaken = [...occupiedInRow, ...selectingInRow];
+
+      const gapRight = allTaken.includes(seatNum + 2) && !allTaken.includes(seatNum + 1);
+      const gapLeft = allTaken.includes(seatNum - 2) && !allTaken.includes(seatNum - 1);
+
+      if (gapRight || gapLeft) {
+        showToast("Không được để trống 1 ghế ở giữa!");
+        return prev;
+      }
+
+      return [...prev, seat].sort((a, b) => a.seatLabel.localeCompare(b.seatLabel, undefined, { numeric: true }));
     });
+  }, [dbSeats]);
 
-    const orderData = await orderRes.json();
+  // 3. XỬ LÝ THANH TOÁN & LƯU DB - SỬ DỤNG apiRequest
+  const handleConfirmBooking = async () => {
+    if (selectedSeats.length === 0) return;
+    setLoading(true);
 
-    if (orderRes.ok) {
-      const orderId = orderData.data.id; // Lấy ID đơn hàng vừa tạo
+    const orderRequest = {
+      showtimeId: info.id, 
+      seatIds: selectedSeats.map(s => s.id),
+      totalPrice: totalAmount
+    };
 
-      // BƯỚC 2: GỌI THANH TOÁN (Theo PaymentController của bà)
-      const paymentRes = await fetch(`http://localhost:8080/api/v1/payments/order/${orderId}`, {
+    try {
+      // Gọi tạo đơn hàng
+      const orderRes = await apiRequest(`/api/v1/orders`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        body: JSON.stringify(orderRequest)
       });
 
-      if (paymentRes.ok) {
-        setIsSuccess(true);
-        setTimeout(() => { onClose(); window.location.reload(); }, 3000);
-      }
-    } else {
-      showToast(orderData.message || "Lỗi đặt vé!", "error");
-    }
-  } catch (error) {
-    showToast("Không thể kết nối đến server!", "error");
-  } finally {
-    setLoading(false);
-  }
-};
+      const orderData = await orderRes.json();
 
-  // 3. ĐẾM NGƯỢC GIỮ CHỖ
+      if (orderRes.ok) {
+        const orderId = orderData.data?.id || orderData.id; 
+        
+        // Gọi thanh toán cho đơn hàng vừa tạo
+        const paymentRes = await apiRequest(`/api/v1/payments/order/${orderId}`, {
+          method: 'POST'
+        });
+
+        if (paymentRes.ok) {
+          setIsSuccess(true);
+          setTimeout(() => { 
+            onClose(); 
+            window.location.reload(); 
+          }, 3000);
+        } else {
+          showToast("Lỗi xử lý thanh toán!", "error");
+        }
+      } else {
+        showToast(orderData.message || "Lỗi đặt vé!", "error");
+      }
+    } catch (error) {
+      showToast("Không thể kết nối đến server!", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 4. TIMER GIỮ CHỖ
   useEffect(() => {
     if (step === 1 && selectedSeats.length > 0) {
       const timer = setInterval(() => {
@@ -110,43 +144,11 @@ export default function BookingModal({ info, onClose }: any) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const toggleSeat = useCallback((seat: any) => {
-    setSelectedSeats((prev) => {
-      const isExist = prev.find((s) => s.seatLabel === seat.seatLabel);
-      if (isExist) return prev.filter((s) => s.seatLabel !== seat.seatLabel);
-
-      if (prev.length >= 8) {
-        showToast("Tối đa 8 ghế mỗi đơn hàng!");
-        return prev;
-      }
-
-      // Logic chặn ghế trống ở giữa
-      const rowName = seat.row;
-      const seatNum = parseInt(seat.num);
-      const occupiedInRow = dbSeats.filter((s: any) => s.seatRow === rowName).map((s: any) => parseInt(s.seatNumber));
-      const selectingInRow = prev.filter((s: any) => s.row === rowName).map((s: any) => parseInt(s.num));
-      const allTaken = [...occupiedInRow, ...selectingInRow];
-
-      if ((allTaken.includes(seatNum + 2) && !allTaken.includes(seatNum + 1)) ||
-          (allTaken.includes(seatNum - 2) && !allTaken.includes(seatNum - 1))) {
-        showToast("Không được để trống 1 ghế ở giữa!");
-        return prev;
-      }
-
-      return [...prev, seat].sort((a, b) => 
-        a.seatLabel.localeCompare(b.seatLabel, undefined, { numeric: true })
-      );
-    });
-  }, [dbSeats]);
-
-  const totalAmount = useMemo(() => {
-    return selectedSeats.reduce((sum, s) => sum + (s.price || 0), 0);
-  }, [selectedSeats]);
+  const totalAmount = useMemo(() => selectedSeats.reduce((sum, s) => sum + s.price, 0), [selectedSeats]);
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/98 backdrop-blur-2xl" onClick={onClose}></div>
-      
       <div className="relative z-10 bg-[#0a0a0a] w-full max-w-7xl h-[94vh] rounded-[3rem] border border-white/10 overflow-hidden flex flex-col shadow-2xl">
         
         {toast && (
@@ -219,7 +221,7 @@ export default function BookingModal({ info, onClose }: any) {
               <button 
                 onClick={() => setStep(2)} 
                 disabled={selectedSeats.length === 0}
-                className="px-14 py-5 bg-red-600 hover:bg-red-500 disabled:bg-zinc-900 text-white rounded-full font-[1000] uppercase text-[12px] tracking-[0.4em] shadow-xl"
+                className="px-14 py-5 bg-red-600 hover:bg-red-500 disabled:bg-zinc-900 disabled:text-zinc-500 text-white rounded-full font-[1000] uppercase text-[12px] tracking-[0.4em] shadow-xl"
               >
                 Tiếp tục thanh toán
               </button>
@@ -237,6 +239,6 @@ const SuccessOverlay = () => (
       <Check size={48} className="text-white stroke-[4]" />
     </div>
     <h2 className="text-4xl font-[1000] text-white uppercase italic tracking-tighter">Đặt vé thành công!</h2>
-    <p className="text-zinc-500 text-[10px] mt-4 uppercase font-black tracking-[0.4em]">Chúc bạn có những giây phút xem phim tuyệt vời</p>
+    <p className="text-zinc-500 text-[10px] mt-4 uppercase font-black tracking-[0.4em]">Giao dịch hoàn tất</p>
   </div>
 );

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { User, Ticket, Bell, Settings, CreditCard, LogOut, ChevronDown, ShieldCheck, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
+import { apiRequest } from "../../lib/api";
 
 export default function TopMenu() {
   const [user, setUser] = useState<any>(null);
@@ -20,12 +21,7 @@ export default function TopMenu() {
       }
 
       try {
-        const res = await fetch('http://localhost:8080/api/v1/users/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
+        const res = await apiRequest('/api/v1/users/me');
 
         if (res.ok) {
           const result = await res.json();
@@ -63,8 +59,8 @@ export default function TopMenu() {
     window.location.href = "/";
   };
 
-  const isSuperAdmin = user?.roles?.some((r: any) => r.roleName === 'ROLE_SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
-  const isAdmin = user?.roles?.some((r: any) => r.roleName === 'ROLE_ADMIN' || r === 'ROLE_ADMIN');
+  const isSuperAdmin = user?.roles?.some((r: any) => r.roleName === 'SUPER_ADMIN' || r === 'SUPER_ADMIN');
+  const isAdmin = user?.roles?.some((r: any) => r.roleName === 'ADMIN' || r === 'ADMIN');
 
   return (
     <div className="bg-black border-b border-white/10 relative z-[999]">

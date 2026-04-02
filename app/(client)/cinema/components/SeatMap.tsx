@@ -1,12 +1,16 @@
 "use client";
-import React, { useMemo, useRef } from 'react';
+import React, { useRef } from 'react';
 import QuickPinchZoom from 'react-quick-pinch-zoom';
-import { Minimize2 } from 'lucide-react';
+import { SeatType } from './BookingModal';
 
-const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: any) => {
+interface SeatMapProps {
+  dbSeats: SeatType[];
+  selectedSeats: SeatType[];
+  onToggleSeat: (seat: SeatType) => void;
+}
+
+const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: SeatMapProps) => {
   const imgRef = useRef<HTMLDivElement>(null);
-
-  // Cấu hình: 10 hàng, mỗi hàng 14 ghế (Dễ dàng thay đổi)
   const ROWS_CONFIG = ['A', 'B', 'C', 'D', 'E', 'F'];
   const SEATS_PER_ROW = 10;
 
@@ -18,24 +22,14 @@ const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: any) => {
 
   return (
     <div className="flex-1 relative bg-[#020202] overflow-hidden min-h-[500px] cursor-grab active:cursor-grabbing">
-      <QuickPinchZoom 
-        onUpdate={onUpdate} 
-        wheelScaleFactor={0.05} 
-        tapZoomFactor={0.15}
-        draggableUnZoomed={true}
-      >
-        <div 
-          ref={imgRef} 
-          className="p-10 md:p-2 inline-block min-w-full text-center origin-center transition-all duration-75"
-          style={{ touchAction: 'none' }} 
-        >
-          {/* Màn hình Cinema */}
+      <QuickPinchZoom onUpdate={onUpdate} wheelScaleFactor={0.05} tapZoomFactor={0.15} draggableUnZoomed={true}>
+        <div ref={imgRef} className="p-10 md:p-2 inline-block min-w-full text-center origin-center transition-all duration-75" style={{ touchAction: 'none' }}>
+          
           <div className="max-w-xs mx-auto mb-5 opacity-30">
             <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-red-600 to-transparent shadow-[0_0_15px_red]"></div>
             <p className="text-[10px] text-center text-red-600 font-black uppercase mt-2 tracking-[1.5em]">Màn hình</p>
           </div>
 
-          {/* Grid ghế dạng A1, A2... */}
           <div className="grid gap-1.5 select-none">
             {ROWS_CONFIG.map((rowName) => (
               <div key={rowName} className="flex gap-1.5 justify-center items-center">
@@ -44,21 +38,30 @@ const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: any) => {
                 {Array.from({ length: SEATS_PER_ROW }, (_, i) => {
                   const seatNo = (i + 1).toString();
                   const seatLabel = `${rowName}${seatNo}`;
-                  
-                  // Kiểm tra xem ghế này đã được mua (có trong DB) chưa
-                  const occupiedSeat = dbSeats.find(
-                    (s: any) => s.seatRow === rowName && s.seatNumber === seatNo
-                  );
-
-                  const isOccupied = !!occupiedSeat;
-                  const isSelected = selectedSeats.some((s: any) => s.seatLabel === seatLabel);
                   const isVip = ['E', 'F'].includes(rowName);
+                  
+                  // Tìm ghế trong DB
+                  let seatData = dbSeats.find((s) => s.seatRow === rowName && s.seatNumber === seatNo);
+                  
+                  // Xác định trạng thái chiếm chỗ (Hỗ trợ cả trường hợp DB chỉ trả về ghế đã bán)
+                  const isOccupied = seatData ? (seatData.status === 'OCCUPIED' || !seatData.status) : false;
+                  const isSelected = selectedSeats.some((s) => s.seatLabel === seatLabel);
+
+                  // Payload gửi lên BookingModal (Nếu DB không có sẵn ID, tự sinh Fake ID để test giao diện không bị lỗi undefined)
+                  const seatPayload: SeatType = {
+                    id: seatData?.id || Number(`${rowName.charCodeAt(0)}${seatNo.padStart(2, '0')}`),
+                    seatRow: rowName,
+                    seatNumber: seatNo,
+                    seatLabel: seatLabel,
+                    price: seatData?.price || (isVip ? 210000 : 165000),
+                    status: seatData?.status || 'AVAILABLE'
+                  };
 
                   return (
                     <button
                       key={seatLabel}
                       disabled={isOccupied}
-                      onClick={() => onToggleSeat({ row: rowName, num: seatNo, isVip, seatLabel, price: isVip ? 210000 : 165000 })}
+                      onClick={() => onToggleSeat(seatPayload)}
                       className={`w-8 h-8 md:w-9 md:h-9 rounded-lg text-[7px] font-bold transition-all duration-300 border flex items-center justify-center shrink-0
                         ${isOccupied 
                           ? 'bg-zinc-900 border-zinc-900 text-zinc-800 cursor-not-allowed opacity-20' 
@@ -73,13 +76,11 @@ const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: any) => {
                     </button>
                   );
                 })}
-                
                 <span className="text-[8px] w-6 h-6 flex items-center justify-center text-white/10 font-bold border border-white/5 rounded-md">{rowName}</span>
               </div>
             ))}
           </div>
 
-          {/* Chú thích trạng thái */}
           <div className="mt-5 flex flex-wrap justify-center gap-4 opacity-50">
              {[
                { label: 'Thường', cls: 'bg-zinc-900 border-zinc-800' },

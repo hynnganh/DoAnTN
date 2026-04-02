@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, MapPin, Loader2, ChevronRight, Calendar, Film, Clock, Ticket } from 'lucide-react';
 import BookingModal from './components/BookingModal';
+import { apiRequest } from '@/app/lib/api';
 
-// 1. SUB-COMPONENT: RENDER TỪNG BỘ PHIM VÀ SUẤT CHIẾU
 const MovieShowtimeItem = ({ movie, onSelect }: any) => (
   <div className="flex flex-col md:flex-row gap-5 p-5 rounded-[2rem] bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
     <div className="relative shrink-0">
@@ -68,15 +68,17 @@ export default function Cinema() {
 
   const dateRef = useRef<HTMLDivElement>(null);
 
-  // FETCH DANH SÁCH RẠP (GET /api/v1/cinemas)
   useEffect(() => {
     const fetchCinemas = async () => {
       try {
-        const res = await fetch('http://localhost:8080/api/v1/cinemas');
-        if (!res.ok) throw new Error("Status " + res.status);
-        const data = await res.json();
-        setCinemas(data.data || []);
-        if (data.data?.length > 0) setSelectedId(data.data[0].id);
+        const res = await apiRequest('/api/v1/cinemas');
+        if (!res.ok) throw new Error(`Status: ${res.status}`);
+        const result = await res.json();
+        const cinemaList = result.data || result;
+        setCinemas(cinemaList);
+        if (cinemaList && cinemaList.length > 0) {
+          setSelectedId(cinemaList[0].id || cinemaList[0].cinemaId);
+        }
       } catch (error) {
         console.error("Lỗi tải danh sách rạp:", error);
       } finally {
@@ -86,33 +88,24 @@ export default function Cinema() {
     fetchCinemas();
   }, []);
 
-  // FETCH SUẤT CHIẾU - ĐÃ FIX KHỚP VỚI BE: /api/v1/showtimes/cinema-item/{id}
   useEffect(() => {
     if (!selectedId) return;
 
     const fetchShowtimes = async () => {
       setFetchingShowtimes(true);
       try {
-        const res = await fetch(`http://localhost:8080/api/v1/showtimes/cinema-item/${selectedId}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-
+        const res = await apiRequest(`/api/v1/showtimes/cinema-item/${selectedId}`);
         if (!res.ok) {
-            console.error(`Lỗi ${res.status}: Check lại endpoint /api/v1/showtimes/cinema-item/${selectedId}`);
             setMovies([]);
             return;
         }
-
         const result = await res.json();
         
         if (result && result.data) {
-          // 1. FILTER THEO NGÀY Ở FRONTEND (Vì cổng này của BE chưa lọc theo ngày)
           const filteredByDate = result.data.filter((item: any) => 
             item.startTime.startsWith(selectedDate)
           );
 
-          // 2. GROUPING DỮ LIỆU
           const grouped = filteredByDate.reduce((acc: any, curr: any) => {
             const m = curr.movie;
             if (!m) return acc;
@@ -157,7 +150,7 @@ export default function Cinema() {
     };
 
     fetchShowtimes();
-  }, [selectedId, selectedDate]); // Trigger lại khi đổi ngày hoặc đổi rạp
+  }, [selectedId, selectedDate]);
 
   const filteredCinemas = useMemo(() => 
     cinemas.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())), 
@@ -186,7 +179,6 @@ export default function Cinema() {
     <div className="bg-[#050505] min-h-screen pt-16 pb-12 px-4 md:px-6 text-white selection:bg-red-600">
       <div className="max-w-6xl mx-auto space-y-8">
         
-        {/* HERO HEADER */}
         <div className="relative overflow-hidden rounded-[2.5rem] bg-zinc-900/40 border border-white/5 p-8">
           <div className="relative z-10 flex items-center justify-between gap-6">
             <div className="space-y-2">

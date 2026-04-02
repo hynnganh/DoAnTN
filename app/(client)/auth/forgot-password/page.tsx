@@ -10,7 +10,6 @@ export default function ForgotPasswordPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Giả lập thời gian gửi mail bảo mật
     setTimeout(() => {
       setLoading(false);
       setIsSent(true);
@@ -20,15 +19,12 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex bg-[#050505] text-white font-sans overflow-hidden selection:bg-red-600/30">
       
-      {/* --- BÊN TRÁI: KHU VỰC XỬ LÝ CHÍNH --- */}
       <div className="w-full lg:w-[55%] flex flex-col justify-center px-8 md:px-20 py-12 relative z-10 animate-in fade-in slide-in-from-left-8 duration-1000 ease-out">
         
-        {/* Nền mờ ảo phía sau form */}
         <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-red-600/5 rounded-full blur-[100px] -z-10 pointer-events-none" />
 
         <div className="max-w-[460px] mx-auto w-full">
           
-          {/* Nút quay lại với hiệu ứng hover trượt */}
           <Link 
             href="/auth" 
             className="mb-12 inline-flex items-center gap-3 text-[10px] font-black uppercase text-zinc-500 hover:text-white transition-all tracking-[0.3em] group"

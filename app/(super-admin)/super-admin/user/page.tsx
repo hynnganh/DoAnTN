@@ -57,8 +57,8 @@ export default function SuperAdminUserPage() {
 
   const changeUserRole = async (userId: number, roles: any[]) => {
     // FIX: Map theo đúng trường roleName trong Entity Role của bà
-    const isAdmin = roles.some(r => r.roleName === 'ROLE_ADMIN');
-    const newRole = isAdmin ? 'ROLE_USER' : 'ROLE_ADMIN';
+    const isAdmin = roles.some(r => r.roleName === 'ADMIN');
+    const newRole = isAdmin ? 'USER' : 'ADMIN';
     
     if (!window.confirm(`Xác nhận đổi quyền thành ${newRole}?`)) return;
 
@@ -150,8 +150,8 @@ export default function SuperAdminUserPage() {
               <tr><td colSpan={5} className="p-32 text-center"><Loader2 className="animate-spin text-red-600 mx-auto" size={40} /></td></tr>
             ) : filteredUsers.map((user: any) => {
               // FIX: Dùng roleName từ Entity Role của bà
-              const isAdmin = user.roles?.some((r: any) => r.roleName === 'ROLE_ADMIN');
-              const isSuper = user.roles?.some((r: any) => r.roleName === 'ROLE_SUPER_ADMIN');
+              const isAdmin = user.roles?.some((r: any) => r.roleName === 'ADMIN');
+              const isSuper = user.roles?.some((r: any) => r.roleName === 'SUPER_ADMIN');
 
               return (
                 <tr key={user.userId} className="hover:bg-white/[0.01] transition-all group">
