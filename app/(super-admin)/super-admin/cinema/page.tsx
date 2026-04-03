@@ -1,9 +1,10 @@
 "use client";
-
 import React, { useState, useEffect } from 'react';
-import { MapPin, Clock, Loader2, Plus, X, Building2 } from 'lucide-react';
-import { useRouter } from 'next/navigation'; // Dùng để chuyển trang
-import toast, { Toaster } from 'react-hot-toast';
+import { Loader2, Plus, Building2, ChevronRight, Fingerprint, ShieldCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Toaster } from 'react-hot-toast';
+import { apiRequest } from '@/app/lib/api'; 
+import AddCinemaModal from './AddCinemaModal';
 
 export default function CinemaPage() {
   const router = useRouter();
@@ -11,23 +12,16 @@ export default function CinemaPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // State cho Form thêm rạp
-  const [formData, setFormData] = useState({
-    name: '',
-    address: '',
-    city: '',
-    hoursPerRoom: 0,
-    cinemaId: 1 // Mặc định hệ thống 1
-  });
-
-  // --- LẤY DANH SÁCH ---
   const fetchCinemas = async () => {
+    setLoading(true);
     try {
-      const res = await fetch('http://localhost:8080/api/v1/cinema-items');
+      const res = await apiRequest('/api/v1/cinemas');
+      if (!res.ok) throw new Error("Fetch failed");
       const result = await res.json();
-      setItems(result.data);
+      const cinemaList = result.data || result;
+      setItems(Array.isArray(cinemaList) ? cinemaList : []);
     } catch (err) {
-      console.log("Lỗi kết nối BE");
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -35,122 +29,87 @@ export default function CinemaPage() {
 
   useEffect(() => { fetchCinemas(); }, []);
 
-  // --- HÀM THÊM RẠP (POST) ---
-  const handleAddCinema = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch('http://localhost:8080/api/v1/cinema-items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      if (res.ok) {
-        toast.success("Thêm rạp thành công!");
-        setIsModalOpen(false);
-        fetchCinemas(); // Load lại danh sách
-      }
-    } catch (err) {
-      toast.error("Lỗi khi thêm rạp!");
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-black text-white p-10">
+    <div className="min-h-screen bg-[#050505] text-white p-3 font-sans selection:bg-red-600">
       <Toaster position="top-right" />
       
-      {/* Header */}
-      <div className="flex justify-between items-center mb-10">
-        <h1 className="text-6xl font-[1000] italic uppercase tracking-tighter text-white">
-          HỆ THỐNG <span className="text-red-600">CỤM RẠP</span>
-        </h1>
+      <AddCinemaModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSuccess={fetchCinemas} 
+      />
+
+      {/* --- HEADER --- */}
+      <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-[1px] bg-red-600 animate-pulse"></span>
+            <p className="text-red-600 font-bold text-[9px] uppercase tracking-[0.4em]">Internal Management</p>
+          </div>
+          <h1 className="text-4xl font-[1000] italic uppercase tracking-tighter leading-none">
+            Hệ Thống <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-500">Các Quận</span>
+          </h1>
+        </div>
+        
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-black uppercase text-xs transition-all active:scale-95"
+          className="group relative px-8 py-4 bg-white text-black rounded-xl font-black uppercase text-[10px] tracking-widest transition-all hover:bg-red-600 hover:text-white active:scale-95 flex items-center gap-3 shadow-xl"
         >
-          + Thêm chi nhánh
+          <Plus size={18} className="group-hover:rotate-180 transition-transform duration-500" />
+          <span>Thêm chi nhánh</span>
         </button>
       </div>
 
+      {/* --- CONTENT --- */}
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-red-600" size={40} /></div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {items?.map((item: any) => (
-            <div 
-              key={item.id} 
-              onClick={() => router.push(`/super-admin/cinema/${item.id}`)} // NHẤN VÀO XEM CHI TIẾT
-              className="group cursor-pointer bg-zinc-900/50 border border-white/10 rounded-[2.5rem] p-8 hover:border-red-600 hover:bg-zinc-800 transition-all shadow-xl"
-            >
-              <div className="flex justify-between mb-6">
-                <span className="text-[10px] font-black text-red-600 uppercase border border-red-600/20 px-3 py-1 rounded-full group-hover:bg-red-600 group-hover:text-white transition-all">
-                  {item.cinema?.name || "VINACENTER"}
-                </span>
-              </div>
-
-              <h2 className="text-2xl font-black uppercase italic text-white mb-2">{item.name}</h2>
-              
-              <div className="flex items-center gap-2 text-zinc-500 mb-6 text-xs font-bold">
-                <MapPin size={14} className="text-red-600" /> 
-                <span>{item.address}, {item.city}</span>
-              </div>
-
-              <div className="pt-6 border-t border-white/5 flex justify-between items-center text-zinc-400 font-bold">
-                <div>
-                  <p className="text-[10px] uppercase font-black">Công suất</p>
-                  <p className="text-lg font-black italic text-white">{item.hoursPerRoom}h/Phòng</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] uppercase font-black">Mã rạp</p>
-                  <p className="text-sm font-black text-red-600">#00{item.id}</p>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="flex flex-col items-center justify-center py-40 gap-6">
+          <Loader2 className="animate-spin text-red-600" size={50} strokeWidth={3} />
+          <p className="text-zinc-700 text-[10px] font-black uppercase tracking-[0.6em] animate-pulse">Synchronizing...</p>
         </div>
-      )}
+      ) : (
+        <div className="max-w-[1600px] mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {items.length > 0 ? (
+            items.map((item: any) => (
+              <div 
+                key={item.id} 
+                onClick={() => router.push(`/super-admin/cinema/${item.id}`)}
+                className="group relative bg-[#0d0d0d] border border-white/5 rounded-[2rem] p-6 transition-all duration-500 hover:border-red-600/40 hover:bg-zinc-900/20 cursor-pointer overflow-hidden shadow-lg flex flex-col justify-between min-h-[220px]"
+              >
+                {/* ID Watermark - Nhỏ lại cho khớp Card */}
+                <div className="absolute -top-4 -left-2 text-[80px] font-black text-white/[0.01] italic leading-none pointer-events-none group-hover:text-red-600/[0.03] transition-all duration-700">
+                  {item.id < 10 ? `0${item.id}` : item.id}
+                </div>
 
-      {/* --- MODAL THÊM RẠP --- */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-white/10 w-full max-w-lg rounded-[3rem] p-10 animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl font-black italic uppercase">Thêm <span className="text-red-600">Rạp mới</span></h2>
-              <button onClick={() => setIsModalOpen(false)}><X className="text-zinc-500 hover:text-white" /></button>
-            </div>
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="p-3 bg-zinc-900 rounded-xl group-hover:bg-red-600 group-hover:shadow-[0_0_20px_rgba(220,38,38,0.3)] transition-all duration-500">
+                      <Building2 className="text-zinc-500 group-hover:text-white" size={20} />
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-zinc-600 italic">#CN-{item.id}</span>
+                  </div>
 
-            <form onSubmit={handleAddCinema} className="space-y-4">
-              <input 
-                placeholder="Tên cụm rạp..." 
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 outline-none focus:border-red-600"
-                onChange={e => setFormData({...formData, name: e.target.value})}
-                required
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <input 
-                  placeholder="Thành phố..." 
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 outline-none focus:border-red-600"
-                  onChange={e => setFormData({...formData, city: e.target.value})}
-                  required
-                />
-                <input 
-                  type="number" 
-                  placeholder="Giờ/Phòng..." 
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 outline-none focus:border-red-600"
-                  onChange={e => setFormData({...formData, hoursPerRoom: parseInt(e.target.value)})}
-                  required
-                />
+                  <h2 className="text-xl font-black uppercase italic text-white leading-tight group-hover:text-red-500 transition-colors line-clamp-2">
+                    {item.name}
+                  </h2>
+                </div>
+
+                <div className="relative z-10 mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
+                  <div className="flex items-center gap-2 opacity-30 group-hover:opacity-100 transition-all">
+                    <ShieldCheck size={14} className="text-red-600" />
+                    <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500">Secure</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
+                    <ChevronRight size={16} />
+                  </div>
+                </div>
               </div>
-              <textarea 
-                placeholder="Địa chỉ chi tiết..." 
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 outline-none focus:border-red-600 h-24"
-                onChange={e => setFormData({...formData, address: e.target.value})}
-                required
-              />
-              <button type="submit" className="w-full bg-red-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-red-700 transition-all">
-                Xác nhận lưu rạp
-              </button>
-            </form>
-          </div>
+            ))
+          ) : (
+            <div className="col-span-full py-24 text-center border border-dashed border-white/5 rounded-[2rem]">
+              <Fingerprint className="mx-auto text-zinc-800 mb-4" size={50} />
+              <p className="text-zinc-600 font-black uppercase tracking-[0.4em] italic text-[10px]">No Records Found</p>
+            </div>
+          )}
         </div>
       )}
     </div>

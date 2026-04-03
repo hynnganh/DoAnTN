@@ -1,7 +1,7 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { ArrowLeft, Save, Globe, Clock, Calendar, Loader2, Tag, Film } from 'lucide-react';
+import { ArrowLeft, Save, Clock, Calendar, Loader2, Tag, Film, User, Globe, Star, Image as ImageIcon } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { apiRequest } from '@/app/lib/api';
 import Cookies from 'js-cookie';
@@ -15,8 +15,27 @@ export default function MovieForm({ initialData, type }: MovieFormProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [genres, setGenres] = useState<any[]>([]);
+  const [loadingGenres, setLoadingGenres] = useState(true);
+  
+  // --- THÊM STATE ĐỂ PREVIEW ẢNH ---
+  const [posterPreview, setPosterPreview] = useState(initialData?.posterUrl || "");
 
-  // Phân biệt đường dẫn admin/super-admin
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        const res = await apiRequest('/api/v1/genres');
+        const resData = await res.json();
+        setGenres(resData.data || resData);
+      } catch (error) {
+        toast.error("Không thể tải danh sách thể loại!");
+      } finally {
+        setLoadingGenres(false);
+      }
+    };
+    fetchGenres();
+  }, []);
+
   const basePath = pathname.includes('/super-admin') ? '/super-admin/movie' : '/admin/movies';
 
   const formatDateForInput = (dateString: string) => {
@@ -27,12 +46,11 @@ export default function MovieForm({ initialData, type }: MovieFormProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const loadingToast = toast.loading('Đang ghi đè dữ liệu hệ thống...');
+    const loadingToast = toast.loading(type === 'create' ? 'Đang tạo phim mới...' : 'Đang cập nhật...');
 
     const formData = new FormData(e.currentTarget);
     const movieData = Object.fromEntries(formData.entries());
 
-    // Payload khớp 100% với JSON Backend yêu cầu (Có genreId)
     const payload = {
       title: String(movieData.title),
       description: String(movieData.description || ""),
@@ -40,40 +58,38 @@ export default function MovieForm({ initialData, type }: MovieFormProps) {
       director: String(movieData.director || ""),
       cast: String(movieData.cast || ""),
       country: String(movieData.country || ""),
+      rating: Number(movieData.rating) || 0,
       status: String(movieData.status),
       posterUrl: String(movieData.posterUrl || ""),
       trailerUrl: String(movieData.trailerUrl || ""),
       releaseDate: movieData.releaseDate,
-      genreId: Number(movieData.genreId) || 0 // Ép kiểu số cho genreId
+      genreId: Number(movieData.genreId)
     };
 
     try {
       const isEdit = type === 'edit';
       const url = isEdit ? `/api/v1/movies/${initialData?.id}` : `/api/v1/movies`;
       const method = isEdit ? 'PUT' : 'POST';
-
       const token = localStorage.getItem("token") || Cookies.get("token");
-console.log("Token xịn đây bà ơi:", token);
+      
       const response = await apiRequest(url, { 
         method, 
         body: JSON.stringify(payload),
-        headers: {
-          'Authorization': `Bearer ${token}`
+        headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
         }
       });
 
       if (response.ok) {
-        toast.success('Thao tác thành công!', { id: loadingToast });
+        toast.success(isEdit ? 'Cập nhật thành công!' : 'Tạo phim mới thành công!', { id: loadingToast });
         setTimeout(() => {
           router.push(basePath);
           router.refresh();
-        }, 800);
+        }, 1000);
       } else {
         const result = await response.json().catch(() => ({}));
-        const msg = response.status === 403 
-          ? "403: Không có quyền Admin hoặc Token lỗi!" 
-          : (result.message || "Lỗi dữ liệu đầu vào!");
-        toast.error(msg, { id: loadingToast });
+        toast.error(result.message || "Lỗi dữ kết nối!", { id: loadingToast });
       }
     } catch (error) {
       toast.error('Lỗi kết nối Server!', { id: loadingToast });
@@ -87,61 +103,112 @@ console.log("Token xịn đây bà ơi:", token);
       <Toaster position="top-right" />
       
       <button type="button" onClick={() => router.push(basePath)} className="flex items-center gap-2 text-zinc-500 hover:text-white text-[9px] font-black uppercase tracking-[0.3em] mb-10 transition-all group">
-        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Quay lại quản lý phim
+        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Quay lại danh sách
       </button>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-12 gap-8">
+        {/* CỘT TRÁI */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
           <div className="flex items-end gap-4 mb-4 font-[1000] italic uppercase text-white tracking-tighter leading-none">
             <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-600/20"><Film size={24} /></div>
-            <h1 className="text-4xl">{type === 'edit' ? 'Sửa' : 'Tạo'} <span className="text-zinc-700 text-3xl font-black">Phim</span></h1>
+            <h1 className="text-4xl">{type === 'edit' ? 'Hiệu chỉnh' : 'Thêm mới'} <span className="text-zinc-700 text-3xl font-black">Phim</span></h1>
           </div>
 
           <div className="bg-zinc-900/40 border border-white/5 p-8 rounded-[2.5rem] space-y-6 shadow-2xl backdrop-blur-md">
             <div className="space-y-2">
               <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">Tên bộ phim</label>
-              <input name="title" required defaultValue={initialData?.title} className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none focus:border-red-600" />
+              <input name="title" required defaultValue={initialData?.title} className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none focus:border-red-600 transition-all" />
             </div>
+            
             <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">Mô tả</label>
-              <textarea name="description" rows={4} defaultValue={initialData?.description} className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none focus:border-red-600 resize-none" />
+              <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">Mô tả cốt truyện</label>
+              <textarea name="description" rows={4} defaultValue={initialData?.description} className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none focus:border-red-600 resize-none transition-all" />
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1 flex items-center gap-1"><Clock size={12}/> Thời lượng</label>
-                <input name="duration" type="number" required defaultValue={initialData?.duration} className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none" />
+                <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1 flex items-center gap-1"><User size={12}/> Đạo diễn</label>
+                <input name="director" defaultValue={initialData?.director} className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none focus:border-red-600" />
               </div>
               <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1 flex items-center gap-1"><Calendar size={12}/> Khởi chiếu</label>
-                <input name="releaseDate" type="date" required defaultValue={formatDateForInput(initialData?.releaseDate)} className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none focus:border-red-600" />
+                <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1 flex items-center gap-1"><Star size={12}/> Đánh giá (Rating)</label>
+                <input name="rating" type="number" step="0.1" max="10" defaultValue={initialData?.rating} className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none focus:border-red-600" />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">Dàn diễn viên (Cast)</label>
+              <input name="cast" defaultValue={initialData?.cast} placeholder="Diễn viên A, Diễn viên B..." className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none focus:border-red-600" />
             </div>
           </div>
         </div>
 
+        {/* CỘT PHẢI: THÔNG SỐ & PREVIEW ẢNH */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="bg-zinc-900/40 border border-white/5 p-8 rounded-[2.5rem] space-y-6 shadow-xl">
-            <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase text-red-600 tracking-widest ml-1"><Tag size={12} className="inline mr-1"/> ID Thể loại</label>
-              <input name="genreId" type="number" required defaultValue={initialData?.genre?.id} className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none focus:border-red-600" />
+          <div className="bg-zinc-900/40 border border-white/5 p-8 rounded-[2.5rem] space-y-6 shadow-xl backdrop-blur-md">
+            
+            {/* KHU VỰC HIỂN THỊ ẢNH POSTER */}
+            <div className="space-y-3">
+              <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">Poster Preview</label>
+              <div className="relative aspect-[2/3] w-full bg-white/5 border border-dashed border-white/10 rounded-[1.5rem] overflow-hidden group flex items-center justify-center">
+                {posterPreview ? (
+                  <img 
+                    src={posterPreview} 
+                    alt="Poster Preview" 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    onError={() => {
+                        setPosterPreview(""); // Nếu link lỗi thì reset
+                        toast.error("Link ảnh không hợp lệ!");
+                    }}
+                  />
+                ) : (
+                  <div className="text-center space-y-2 opacity-20">
+                    <ImageIcon size={48} className="mx-auto" />
+                    <p className="text-[8px] font-bold">Chưa có ảnh</p>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">Trạng thái</label>
-              <select name="status" defaultValue={initialData?.status || "NOW_SHOWING"} className="w-full bg-zinc-800 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none cursor-pointer">
-                <option value="NOW_SHOWING">Đang chiếu</option>
-                <option value="COMING_SOON">Sắp chiếu</option>
-                <option value="END">Đã kết thúc</option>
-              </select>
+            <div className="space-y-2 pt-4 border-t border-white/5">
+                <label className="text-[9px] font-black uppercase text-zinc-600 tracking-widest ml-1 italic">Link Media</label>
+                {/* ONCHANGE ĐỂ CẬP NHẬT PREVIEW NGAY LẬP TỨC */}
+                <input 
+                  name="posterUrl" 
+                  defaultValue={initialData?.posterUrl} 
+                  onChange={(e) => setPosterPreview(e.target.value)}
+                  placeholder="Dán link ảnh (.jpg, .png)..." 
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-[10px] text-zinc-400 outline-none mb-2 focus:border-red-600 transition-all" 
+                />
+                <input name="trailerUrl" defaultValue={initialData?.trailerUrl} placeholder="URL Trailer..." className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-[10px] text-zinc-400 outline-none focus:border-red-600" />
             </div>
+
             <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1 text-[8px] opacity-50 italic">Poster / Trailer URL</label>
-                <input name="posterUrl" defaultValue={initialData?.posterUrl} placeholder="Poster URL..." className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-[10px] text-zinc-400 outline-none mb-2" />
-                <input name="trailerUrl" defaultValue={initialData?.trailerUrl} placeholder="Trailer URL..." className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-[10px] text-zinc-400 outline-none" />
+                <label className="text-[9px] font-black uppercase text-red-600 tracking-widest ml-1 flex items-center gap-1"><Tag size={12}/> Thể loại</label>
+                <select name="genreId" required defaultValue={initialData?.genre?.id} className="w-full bg-zinc-800 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none cursor-pointer focus:border-red-600 transition-all appearance-none">
+                    <option value="">Chọn thể loại</option>
+                    {genres.map((g: any) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                </select>
             </div>
+
+            <div className="grid grid-cols-1 gap-4">
+               <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1 flex items-center gap-1"><Clock size={12}/> Thời lượng</label>
+                <input name="duration" type="number" required defaultValue={initialData?.duration} className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1 flex items-center gap-1"><Calendar size={12}/> Ngày khởi chiếu</label>
+                <input name="releaseDate" type="date" required defaultValue={formatDateForInput(initialData?.releaseDate)} className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-5 text-sm text-white outline-none" />
+              </div>
+            </div>
+
+            
           </div>
 
-          <button type="submit" disabled={isSubmitting} className="w-full bg-white hover:bg-red-600 text-black hover:text-white py-5 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50">
-            {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : <><Save size={16}/> Cập nhật hệ thống</>}
+          <button type="submit" disabled={isSubmitting || loadingGenres} className="w-full bg-white hover:bg-red-600 text-black hover:text-white py-5 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 shadow-xl">
+            {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : <><Save size={16}/> {type === 'create' ? 'Tạo phim ngay' : 'Lưu thay đổi'}</>}
           </button>
         </div>
       </form>

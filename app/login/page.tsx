@@ -39,15 +39,15 @@ export default function LoginPage() {
         let targetPath = '/';
         let primaryRole = 'USER';
 
-        if (roles.includes('SUPER_ADMIN')) {
+        if (roles.includes('ROLE_SUPER_ADMIN')) {
           targetPath = '/super-admin';
-          primaryRole = 'SUPER_ADMIN';
-        } else if (roles.includes('ADMIN')) {
+          primaryRole = 'ROLE_SUPER_ADMIN';
+        } else if (roles.includes('ROLE_ADMIN')) {
           targetPath = '/admin';
-          primaryRole = 'ADMIN';
+          primaryRole = 'ROLE_ADMIN';
         } else {
           targetPath = '/'; 
-          primaryRole = 'USER';
+          primaryRole = 'ROLE_USER';
         }
 
         Cookies.set('token', token, { expires: 7 }); 

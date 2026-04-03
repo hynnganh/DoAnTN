@@ -57,10 +57,8 @@ const handleLogout = () => {
   const MENU_ITEMS = [
     { label: "Tổng quan", icon: <LayoutDashboard size={20} />, href: "/super-admin" },
     { label: "Phim ảnh", icon: <Film size={20} />, href: "/super-admin/movie" },
-    { label: "Lịch chiếu", icon: <Clock size={20} />, href: "/super-admin/showtime" },
     { label: "Hệ thống rạp", icon: <MapPin size={20} />, href: "/super-admin/cinema" },
     { label: "Người dùng", icon: <Users size={20} />, href: "/super-admin/user" },
-    { label: "Phân quyền", icon: <ShieldCheck size={20} />, href: "/super-admin/role" },
     { label: "Giá vé & Ghế", icon: <Ticket size={20} />, href: "/super-admin/ticket" },
     { label: "Thống kê", icon: <BarChart3 size={20} />, href: "/super-admin/analytic" },
 ];

@@ -84,7 +84,7 @@ export default function MoviesPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-700">
+    <div className="space-y-2 animate-in fade-in slide-in-from-top-4 duration-700">
       <Toaster position="top-right" /> 
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
@@ -97,7 +97,7 @@ export default function MoviesPage() {
             <input 
               type="text"
               value={searchTerm}
-              placeholder="Tìm tên phim, đạo diễn..."
+              placeholder="Tìm tên phim..."
               className="bg-zinc-900/50 border border-white/5 rounded-2xl pl-12 pr-6 py-4 text-xs text-white focus:outline-none focus:border-red-500/50 w-80 transition-all focus:bg-zinc-900 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)]"
               onChange={(e) => setSearchTerm(e.target.value)}
             />

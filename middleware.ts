@@ -10,7 +10,7 @@ export function middleware(request: NextRequest) {
 
   // 2. Chặn truy cập vào /admin hoặc /super-admin nếu chưa đăng nhập đúng quyền
   if (pathname === '/admin' || pathname === '/super-admin') {
-    if (!token || (role !== 'ADMIN' && role !== 'SUPER_ADMIN')) {
+    if (!token || (role !== 'ROLE_ADMIN' && role !== 'ROLE_SUPER_ADMIN')) {
       // Nếu không có token hoặc sai role, đá về login
       return NextResponse.redirect(new URL('/login', request.url));
     }
@@ -18,7 +18,7 @@ export function middleware(request: NextRequest) {
 
   // 3. Nếu đã đăng nhập rồi mà còn mò vào /login thì đá vào trang tương ứng
   if (pathname === '/login' && token) {
-    if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+    if (role === 'ROLE_ADMIN' || role === 'ROLE_SUPER_ADMIN') {
       return NextResponse.redirect(new URL('/admin', request.url));
     }
     return NextResponse.redirect(new URL('/', request.url));

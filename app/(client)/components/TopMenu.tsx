@@ -59,8 +59,8 @@ export default function TopMenu() {
     window.location.href = "/";
   };
 
-  const isSuperAdmin = user?.roles?.some((r: any) => r.roleName === 'SUPER_ADMIN' || r === 'SUPER_ADMIN');
-  const isAdmin = user?.roles?.some((r: any) => r.roleName === 'ADMIN' || r === 'ADMIN');
+  const isSuperAdmin = user?.roles?.some((r: any) => r.roleName === 'ROLE_SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
+  const isAdmin = user?.roles?.some((r: any) => r.roleName === 'ROLE_ADMIN' || r === 'ROLE_ADMIN');
 
   return (
     <div className="bg-black border-b border-white/10 relative z-[999]">
