@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Plus, Edit3, Trash2, Film, Loader2, Search, Clapperboard } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import { apiRequest } from '@/app/lib/api';
 
 export default function MoviesPage() {
   const [movies, setMovies] = useState([]);
@@ -13,21 +14,12 @@ export default function MoviesPage() {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  // 1. Hàm fetch dữ liệu
+  // 1. Hàm fetch dữ liệu - Đã dùng apiRequest
   const fetchMovies = async (search = "", pageNum = 0) => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      // Encode search term để tránh lỗi ký tự đặc biệt trên URL
-      const url = `http://localhost:8080/api/v1/movies?search=${encodeURIComponent(search)}&page=${pageNum}&size=10`;
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
+      const url = `/api/v1/movies?search=${encodeURIComponent(search)}&page=${pageNum}&size=10`;
+      const response = await apiRequest(url);
       const result = await response.json();
       
       if (response.ok) {
@@ -43,13 +35,12 @@ export default function MoviesPage() {
     }
   };
 
-  // 2. Debounce Search: Đợi user gõ xong 500ms mới gọi API để đỡ tốn tài nguyên
+  // 2. Debounce Search
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      setPage(0); // Reset về trang đầu khi search
+      setPage(0);
       fetchMovies(searchTerm, 0);
     }, 500);
-
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
 
@@ -60,6 +51,7 @@ export default function MoviesPage() {
     }
   }, [page]);
 
+  // 3. Xóa phim - Đã dùng apiRequest
   const handleDelete = async (id: number) => {
     toast((t) => (
       <div className="flex flex-col gap-3 p-1">
@@ -68,16 +60,19 @@ export default function MoviesPage() {
           <button 
             onClick={async () => {
               toast.dismiss(t.id);
-              const token = localStorage.getItem('token');
-              const res = await fetch(`http://localhost:8080/api/v1/movies/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              if (res.ok) {
-                toast.success("Đã xóa phim thành công!");
-                fetchMovies(searchTerm, page);
-              } else {
-                toast.error("Xóa thất bại!");
+              try {
+                const res = await apiRequest(`/api/v1/movies/${id}`, {
+                  method: 'DELETE'
+                });
+                if (res.ok) {
+                  toast.success("Đã xóa phim thành công!");
+                  fetchMovies(searchTerm, page);
+                } else {
+                  const errData = await res.json();
+                  toast.error(errData.message || "Xóa thất bại!");
+                }
+              } catch (error) {
+                toast.error("Lỗi kết nối khi xóa!");
               }
             }}
             className="bg-red-600 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase transition-all hover:bg-red-700"
@@ -133,7 +128,7 @@ export default function MoviesPage() {
               <thead className="bg-white/5 text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em]">
                 <tr>
                   <th className="px-10 py-6">Thông tin phim</th>
-                  <th className="px-10 py-6">Đạo diễn</th>
+                  <th className="px-10 py-6">Thể loại</th>
                   <th className="px-10 py-6 text-right">Thao tác</th>
                 </tr>
               </thead>
@@ -141,22 +136,35 @@ export default function MoviesPage() {
                 {movies.map((movie: any) => (
                   <tr key={movie.id} className="group hover:bg-white/[0.03] transition-all duration-300">
                     <td className="px-10 py-8">
-                      <div className="flex items-center gap-6">
-                        <div className="w-14 h-20 bg-zinc-800 rounded-xl flex items-center justify-center text-red-600 border border-white/5 group-hover:border-red-600/30 transition-all group-hover:scale-105 shadow-lg overflow-hidden relative">
-                          {movie.posterUrl ? (
-                            <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
-                          ) : <Film size={24}/>}
-                        </div>
-                        <div>
-                            <p className="text-white font-[1000] text-lg uppercase italic tracking-tighter group-hover:text-red-500 transition-colors">
-                            {movie.title}
-                            </p>
-                            <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">{movie.duration} phút</p>
-                        </div>
-                      </div>
-                    </td>
+  <div className="flex items-center gap-6">
+    {/* Bọc Link quanh Poster và Nội dung */}
+    <Link 
+      href={`/super-admin/movie/${movie.id}`} 
+      className="flex items-center gap-6 group/item"
+    >
+      <div className="w-14 h-20 bg-zinc-800 rounded-xl flex items-center justify-center text-red-600 border border-white/5 group-hover:border-red-600/50 transition-all group-hover:scale-105 shadow-lg overflow-hidden relative">
+        {movie.posterUrl ? (
+          <img 
+            src={movie.posterUrl} 
+            alt={movie.title} 
+            className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" 
+          />
+        ) : <Film size={24}/>}
+      </div>
+      
+      <div>
+        <p className="text-white font-[1000] text-lg uppercase italic tracking-tighter group-hover:text-red-500 transition-colors">
+          {movie.title}
+        </p>
+        <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">
+          {movie.duration} phút • {movie.genreName || "Phim"}
+        </p>
+      </div>
+    </Link>
+  </div>
+</td>
                     <td className="px-10 py-8 text-xs font-bold text-zinc-400 uppercase tracking-widest group-hover:text-zinc-200 transition-colors">
-                        {movie.director || "Chưa cập nhật"}
+                        {movie.genreName || "Chưa cập nhật"} 
                     </td>
                     <td className="px-10 py-8 text-right">
                       <div className="flex justify-end gap-3 opacity-40 group-hover:opacity-100 transition-all transform group-hover:translate-x-[-10px]">
@@ -173,7 +181,6 @@ export default function MoviesPage() {
               </tbody>
             </table>
             
-            {/* Phân trang */}
             <div className="p-10 border-t border-white/5 flex items-center justify-between">
               <p className="text-[9px] font-black uppercase text-zinc-600 tracking-widest">Hiển thị trang {page + 1} trên {totalPages}</p>
               <div className="flex gap-2">
