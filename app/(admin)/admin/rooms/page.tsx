@@ -2,231 +2,187 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Plus, Monitor, Trash2, Edit3, 
-  Loader2, RefreshCw, Layers, Maximize, 
-  CheckCircle2, XCircle
+  Loader2, Monitor, Armchair, Trash2, 
+  Building2, AlertTriangle, Settings2, ChevronRight 
 } from 'lucide-react';
-import toast, { Toaster } from 'react-hot-toast';
+import { useRouter } from 'next/navigation'; // Import để chuyển trang
+import toast from 'react-hot-toast';
+import { apiRequest } from '@/app/lib/api';
+import FormPhongChieu from './RoomForm';
 
-export default function QuanLyPhongChieuPage() {
+export default function QuanLyPhongCompact() {
+  const router = useRouter(); // Khởi tạo router
+  const ID_RAP_GIA_LAP = 1;
   const [phongChieu, setPhongChieu] = useState<any[]>([]);
   const [dangTai, setDangTai] = useState(true);
-  const [showModal, setShowModal] = useState(false);
   
-  // State cho Form (Thêm/Sửa)
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({
-    roomName: '',
-    screenType: 'Standard',
-    totalSeats: 0
-  });
+  const [hienModal, setHienModal] = useState(false);
+  const [dangSuaId, setDangSuaId] = useState<number | null>(null);
+  const [duLieuForm, setDuLieuForm] = useState({ name: '', totalSeats: 0, cinemaItemId: ID_RAP_GIA_LAP });
+  const [phongDangChonXoa, setPhongDangChonXoa] = useState<{id: number, name: string} | null>(null);
 
-  const layDanhSachPhong = async () => {
+  const taiDanhSachPhong = async () => {
     try {
       setDangTai(true);
-      const res = await fetch('http://localhost:8080/api/v1/rooms', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      const data = await res.json();
-      if (res.ok) setPhongChieu(data.data || []);
-    } catch (err) {
-      toast.error("Lỗi kết nối máy chủ!");
-    } finally {
-      setDangTai(false);
-    }
+      const res = await apiRequest(`/api/v1/rooms/cinema-item/${ID_RAP_GIA_LAP}`);
+      const ketQua = await res.json();
+      setPhongChieu(ketQua.data || []);
+    } catch (err) { 
+      toast.error("Không thể kết nối máy chủ!"); 
+    } finally { setDangTai(false); }
   };
 
-  useEffect(() => { layDanhSachPhong(); }, []);
+  useEffect(() => { taiDanhSachPhong(); }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // --- LOGIC ĐIỀU HƯỚNG ---
+  const toiTrangChiTiet = (id: number) => {
+    router.push(`/admin/rooms/${id}`); // Chuyển đến trang sơ đồ ghế
+  };
+
+  // --- LOGIC MỞ FORM SỬA (Chặn sủi bọt sự kiện) ---
+  const moFormSua = (e: React.MouseEvent, phong: any) => {
+    e.stopPropagation(); // Ngăn không cho sự kiện click lan ra Card (không bị nhảy trang)
+    setDangSuaId(phong.id);
+    setDuLieuForm({ name: phong.name, totalSeats: phong.totalSeats, cinemaItemId: ID_RAP_GIA_LAP });
+    setHienModal(true);
+  };
+
+  const yeuCauXoa = (e: React.MouseEvent, id: number, name: string) => {
+    e.stopPropagation(); // Ngăn không cho nhảy trang chi tiết
+    setPhongDangChonXoa({ id, name });
+  };
+
+  const xacNhanXoaPhong = async () => {
+    if (!phongDangChonXoa) return;
+    const { id, name } = phongDangChonXoa;
+    setPhongDangChonXoa(null);
+    const thongBaoCho = toast.loading(`Đang gỡ bỏ ${name}...`);
+    try {
+      const res = await apiRequest(`/api/v1/rooms/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success(`Đã xóa thành công!`, { id: thongBaoCho });
+        taiDanhSachPhong();
+      } else {
+        toast.error("Phòng này đang có lịch chiếu!", { id: thongBaoCho });
+      }
+    } catch (err) { toast.error("Lỗi hệ thống!", { id: thongBaoCho }); }
+  };
+
+  const xuLyLuu = async (e: React.FormEvent) => {
     e.preventDefault();
-    const method = editingId ? 'PUT' : 'POST';
-    const url = editingId 
-      ? `http://localhost:8080/api/v1/rooms/${editingId}` 
-      : 'http://localhost:8080/api/v1/rooms';
-
+    const dangSua = !!dangSuaId;
+    const url = dangSua ? `/api/v1/rooms/${dangSuaId}` : '/api/v1/rooms';
+    const thongBaoCho = toast.loading("Đang xử lý...");
     try {
-      const res = await fetch(url, {
-        method,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}` 
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (res.ok) {
-        toast.success(editingId ? "Cập nhật thành công!" : "Thêm phòng mới thành công!");
-        setShowModal(false);
-        setEditingId(null);
-        setFormData({ roomName: '', screenType: 'Standard', totalSeats: 0 });
-        layDanhSachPhong();
-      }
-    } catch (err) {
-      toast.error("Đã có lỗi xảy ra!");
-    }
-  };
-
-  const xoaPhong = async (id: number) => {
-    if (!window.confirm("Xác nhận xóa phòng chiếu này?")) return;
-    try {
-      const res = await fetch(`http://localhost:8080/api/v1/rooms/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      const res = await apiRequest(url, { 
+        method: dangSua ? 'PUT' : 'POST', 
+        body: JSON.stringify(duLieuForm) 
       });
       if (res.ok) {
-        toast.success("Đã xóa phòng!");
-        layDanhSachPhong();
+        toast.success(dangSua ? "Đã cập nhật!" : "Đã thêm phòng!", { id: thongBaoCho });
+        setHienModal(false);
+        taiDanhSachPhong();
       }
-    } catch (err) {
-      toast.error("Không thể xóa phòng đang có suất chiếu!");
-    }
+    } catch (err) { toast.error("Lỗi xử lý!", { id: thongBaoCho }); }
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white p-8 md:p-12 font-sans selection:bg-red-600/30">
-      <Toaster position="top-right" />
-
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16">
-        <div className="flex items-center gap-4">
-          <div className="p-4 bg-zinc-900 rounded-3xl border border-white/5 shadow-2xl">
-            <Monitor className="text-red-600 animate-pulse" size={32} />
-          </div>
-          <div>
-            <h1 className="text-5xl font-[1000] italic uppercase tracking-tighter leading-none">
-              HỆ THỐNG <span className="text-red-600">PHÒNG CHIẾU</span>
+    <div className="min-h-screen bg-[#050505] text-zinc-400 p-2 font-sans relative overflow-hidden">
+      <div className="max-w-5xl mx-auto">
+        <div className="flex justify-between items-center mb-12">
+          <div className="flex items-center gap-4">
+            <div className="p-4 bg-zinc-900 rounded-2xl text-red-600 shadow-2xl border border-white/5"><Building2 size={24}/></div>
+            <h1 className="text-2xl font-[1000] uppercase italic text-white tracking-tighter">
+              RẠP CHIẾU <span className="text-red-600">SỐ 01</span>
             </h1>
-            <p className="text-zinc-500 font-black uppercase text-[9px] tracking-[0.4em] mt-2 italic">Cấu hình rạp phim A&K</p>
           </div>
+          <button 
+            onClick={() => { setDangSuaId(null); setDuLieuForm({name:'', totalSeats:0, cinemaItemId: ID_RAP_GIA_LAP}); setHienModal(true); }} 
+            className="px-6 py-3 bg-white text-black rounded-xl font-black text-[10px] uppercase hover:bg-red-600 hover:text-white transition-all active:scale-95"
+          >
+            + Thêm phòng
+          </button>
         </div>
 
-        <button 
-          onClick={() => { setEditingId(null); setShowModal(true); }}
-          className="flex items-center gap-3 px-8 py-4 bg-white text-black rounded-full font-black text-xs uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-xl active:scale-95"
-        >
-          <Plus size={18} strokeWidth={3} />
-          Thiết lập phòng mới
-        </button>
+        {dangTai ? (
+          <div className="flex justify-center py-20"><Loader2 className="animate-spin text-red-600" size={32} /></div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {phongChieu.map((phong) => (
+              <div 
+                key={phong.id} 
+                onClick={() => toiTrangChiTiet(phong.id)} 
+                className="group relative bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] p-8 hover:border-red-600/40 transition-all cursor-pointer shadow-xl overflow-hidden"
+              >
+                {/* Mũi tên chỉ dẫn hiện khi hover */}
+                <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                  <ChevronRight className="text-red-600" size={20} />
+                </div>
+
+                <div className="flex justify-between items-start mb-10">
+                  <Monitor size={24} className="text-zinc-800 group-hover:text-red-600 transition-colors" />
+                  
+                  <div className="flex gap-2">
+                    {/* NÚT SỬA */}
+                    <button 
+                      onClick={(e) => moFormSua(e, phong)} 
+                      className="p-3 bg-zinc-900/50 hover:bg-white hover:text-black rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                      title="Sửa thông tin"
+                    >
+                      <Settings2 size={14} />
+                    </button>
+                    {/* NÚT XÓA */}
+                    <button 
+                      onClick={(e) => yeuCauXoa(e, phong.id, phong.name)} 
+                      className="p-3 bg-zinc-900/50 hover:bg-red-600 hover:text-white rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                      title="Xóa phòng"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                <h3 className="text-xl font-black uppercase italic text-zinc-200 group-hover:text-white transition-colors">{phong.name}</h3>
+                <div className="mt-4 pt-4 border-t border-white/[0.03] flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Armchair size={12} className="text-zinc-700" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">{phong.totalSeats} Ghế</span>
+                  </div>
+                  <span className="text-[8px] font-black uppercase text-zinc-800 tracking-widest group-hover:text-red-800 transition-colors">Xem sơ đồ</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* GRID DANH SÁCH PHÒNG */}
-      {dangTai ? (
-        <div className="flex flex-col items-center justify-center p-32">
-          <Loader2 className="animate-spin text-red-600" size={48} />
-          <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Đang đồng bộ dữ liệu...</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {phongChieu.map((room) => (
-            <div key={room.roomId} className="group relative bg-zinc-900/30 border border-white/5 rounded-[2.5rem] p-8 hover:border-red-600/50 transition-all backdrop-blur-md">
-              <div className="flex justify-between items-start mb-6">
-                <div className="p-3 bg-black rounded-2xl border border-white/5 group-hover:text-red-500 transition-colors">
-                  <Layers size={24} />
-                </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                  <button 
-                    onClick={() => {
-                      setEditingId(room.roomId);
-                      setFormData({ roomName: room.roomName, screenType: room.screenType, totalSeats: room.totalSeats });
-                      setShowModal(true);
-                    }}
-                    className="p-2 hover:bg-white hover:text-black rounded-xl transition-all"
-                  >
-                    <Edit3 size={16} />
-                  </button>
-                  <button 
-                    onClick={() => xoaPhong(room.roomId)}
-                    className="p-2 hover:bg-red-600 hover:text-white rounded-xl transition-all"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-
-              <h3 className="text-2xl font-[1000] italic uppercase mb-2 group-hover:text-red-500 transition-colors">
-                {room.roomName}
-              </h3>
-              
-              <div className="flex items-center gap-4 mt-6">
-                <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Loại màn hình</span>
-                  <span className="text-xs font-bold text-zinc-200 italic">{room.screenType || 'Standard'}</span>
-                </div>
-                <div className="w-px h-8 bg-white/5" />
-                <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Sức chứa</span>
-                  <span className="text-xs font-bold text-zinc-200">{room.totalSeats} Ghế</span>
-                </div>
-              </div>
+      {/* MODAL XÁC NHẬN XÓA */}
+      {phongDangChonXoa && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setPhongDangChonXoa(null)}></div>
+          <div className="relative bg-[#0f0f11] border border-white/10 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl text-center">
+            <div className="w-16 h-16 bg-red-600/10 rounded-full flex items-center justify-center text-red-600 mx-auto mb-6">
+              <AlertTriangle size={32} />
             </div>
-          ))}
+            <h2 className="text-lg font-black uppercase italic text-white mb-2">Xác nhận gỡ bỏ?</h2>
+            <p className="text-zinc-500 text-xs font-bold mb-8 italic px-4">Bà chắc chắn muốn xóa "{phongDangChonXoa.name}" chứ?</p>
+            <div className="flex gap-3">
+              <button onClick={() => setPhongDangChonXoa(null)} className="flex-1 py-4 bg-zinc-900 text-zinc-500 rounded-xl font-black uppercase text-[10px] hover:text-white transition-all">Hủy</button>
+              <button onClick={xacNhanXoaPhong} className="flex-1 py-4 bg-red-600 text-white rounded-xl font-black uppercase text-[10px] hover:bg-red-700">Xóa ngay</button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* MODAL THÊM/SỬA PHÒNG */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-[#0c0c0e] border border-white/10 rounded-[3rem] p-10 w-full max-w-md shadow-2xl">
-            <h2 className="text-3xl font-[1000] italic uppercase text-white mb-8">
-              {editingId ? 'Cập nhật' : 'Thiết lập'} <span className="text-red-600">Phòng</span>
-            </h2>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-zinc-500 ml-2">Tên phòng chiếu</label>
-                <input 
-                  required
-                  className="w-full bg-zinc-900 border border-white/5 rounded-2xl py-4 px-6 text-sm font-bold outline-none focus:border-red-600/50"
-                  value={formData.roomName}
-                  onChange={(e) => setFormData({...formData, roomName: e.target.value})}
-                  placeholder="VD: Phòng 01 (IMAX)"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-zinc-500 ml-2">Loại màn hình</label>
-                  <select 
-                    className="w-full bg-zinc-900 border border-white/5 rounded-2xl py-4 px-4 text-sm font-bold outline-none focus:border-red-600/50 appearance-none"
-                    value={formData.screenType}
-                    onChange={(e) => setFormData({...formData, screenType: e.target.value})}
-                  >
-                    <option value="Standard">Standard</option>
-                    <option value="IMAX">IMAX</option>
-                    <option value="4DX">4DX</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-zinc-500 ml-2">Tổng số ghế</label>
-                  <input 
-                    type="number"
-                    required
-                    className="w-full bg-zinc-900 border border-white/5 rounded-2xl py-4 px-6 text-sm font-bold outline-none focus:border-red-600/50"
-                    value={formData.totalSeats}
-                    onChange={(e) => setFormData({...formData, totalSeats: parseInt(e.target.value)})}
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-4 pt-6">
-                <button 
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 py-4 rounded-2xl border border-white/5 text-[10px] font-black uppercase hover:bg-white/5 transition-all"
-                >
-                  Hủy bỏ
-                </button>
-                <button 
-                  type="submit"
-                  className="flex-1 py-4 rounded-2xl bg-red-600 text-[10px] font-black uppercase hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
-                >
-                  Xác nhận lưu
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* MODAL FORM THÊM/SỬA */}
+      {hienModal && (
+        <FormPhongChieu 
+          dangSuaId={dangSuaId} 
+          duLieuForm={duLieuForm} 
+          setDuLieuForm={setDuLieuForm} 
+          onSubmit={xuLyLuu} 
+          onDong={() => setHienModal(false)}
+        />
       )}
     </div>
   );

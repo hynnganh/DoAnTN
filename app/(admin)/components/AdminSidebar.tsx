@@ -21,11 +21,10 @@ export default function AdminSidebar() {
 
   const navLinks = [
     { name: 'Tổng quan', icon: LayoutDashboard, href: '/admin' },
-    { name: 'Quản lý Vé', icon: Ticket, href: '/admin/tickets' }, 
-    { name: 'Lịch chiếu', icon: Calendar, href: '/admin/showtimes' }, 
     { name: 'Phòng chiếu', icon: Monitor, href: '/admin/rooms' }, 
+    { name: 'Lịch chiếu', icon: Calendar, href: '/admin/showtimes' },
+    { name: 'Quản lý Vé', icon: Ticket, href: '/admin/tickets' }, 
     { name: 'Bắp nước & Combo', icon: Box, href: '/admin/food-combos' },
-    { name: 'Quản lý Kho', icon: Warehouse, href: '/admin/inventory' },
     { name: 'Khách hàng', icon: Users, href: '/admin/users' },
   ];
 

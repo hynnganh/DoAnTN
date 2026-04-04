@@ -16,7 +16,6 @@ export default function ProfilePage() {
       case 'info': return <InfoTab />;
       case 'tickets': return <TicketsTab />;
       case 'payment': return <PaymentTab />;
-      case 'wishlist': return <WishlistTab />;
       case 'settings': return <SettingsTab />;
       default: return <InfoTab />;
     }
