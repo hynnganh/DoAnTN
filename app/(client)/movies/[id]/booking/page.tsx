@@ -96,7 +96,7 @@ const fetchShowtimes = async () => {
         </Link>
 
         <header className="space-y-4">
-          <h1 className="text-4xl md:text-7xl font-[1000] italic uppercase tracking-tighter leading-none">
+          <h1 className="text-xl md:text-3xl font-[1000] italic uppercase tracking-tighter leading-none">
             Lịch chiếu: <span className="text-red-600">{movie?.title}</span>
           </h1>
         </header>
@@ -131,7 +131,7 @@ const fetchShowtimes = async () => {
               ) : Object.keys(groupedShowtimes).length > 0 ? (
                 Object.entries(groupedShowtimes).map(([cinemaName, times]: any) => (
                   <div key={cinemaName} className="bg-zinc-900/20 border border-white/5 rounded-[3rem] p-8 md:p-10 space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                    <h4 className="text-xl md:text-2xl font-[1000] italic uppercase tracking-tight text-white">{cinemaName}</h4>
+                    <h4 className="text-xl md:text-xl font-[1000] italic uppercase tracking-tight text-white">{cinemaName}</h4>
                     <div className="flex flex-wrap gap-4">
                       {times.map((st: any) => (
                         <button key={st.id}

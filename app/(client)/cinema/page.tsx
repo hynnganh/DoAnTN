@@ -186,12 +186,12 @@ export default function Cinema() {
                 <div className="w-1 h-1 bg-red-600 rounded-full animate-ping" />
                 <span className="text-[9px] font-black uppercase tracking-[0.1em] text-red-500">Hệ thống rạp A&K</span>
               </div>
-              <h1 className="text-4xl md:text-6xl font-[1000] italic uppercase tracking-tighter leading-none text-white">
+              <h1 className="text-2xl md:text-4xl font-[1000] italic uppercase tracking-tighter leading-none text-white">
                 Đặt Vé <br /><span className="text-red-600">Nhanh Chóng</span>
               </h1>
             </div>
             <div className="p-5 bg-zinc-900 rounded-[2rem] border border-white/5 hidden md:block">
-               <Film size={40} className="text-red-600 opacity-80" />
+               <Film size={30} className="text-red-600 opacity-80" />
             </div>
           </div>
         </div>

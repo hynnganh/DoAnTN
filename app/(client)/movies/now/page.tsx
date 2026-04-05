@@ -31,7 +31,7 @@ export default function PhimDangChieu() {
   }, []);
 
   return (
-    <div className="bg-[#050505] min-h-screen pt-24 pb-20 px-6 md:px-16 text-white font-sans">
+    <div className="bg-[#050505] min-h-screen pt-5 pb-20 px-6 md:px-16 text-white font-sans">
       {/* Inject CSS Animation đồng bộ với MovieCard */}
       <style>{`
         @keyframes shimmer { 0% { transform: translateX(-150%) skewX(-12deg); } 100% { transform: translateX(150%) skewX(-12deg); } }
@@ -40,13 +40,13 @@ export default function PhimDangChieu() {
       `}</style>
 
       {/* --- HEADER --- */}
-      <div className="max-w-[1440px] mx-auto mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-12">
+      <div className="max-w-[1440px] mx-auto mb-5 flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-12">
         <div className="space-y-4">
           <div className="flex items-center gap-3 text-red-600 font-black tracking-[0.4em] text-[10px] uppercase">
             <span className="w-16 h-[2px] bg-red-600"></span>
             A&K Cinema Now Showing
           </div>
-          <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-none italic">
+          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tighter leading-none italic">
             PHIM <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-red-500 to-orange-500">
               ĐANG CHIẾU
