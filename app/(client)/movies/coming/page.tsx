@@ -11,7 +11,7 @@ export default function PhimSapChieu() {
     const fetchUpcomingMovies = async () => {
       try {
         // Gọi API lấy phim với trạng thái COMING_SOON
-        const response = await apiRequest("/api/v1/movies?status=COMING_SOON&page=0&size=50", { 
+        const response = await apiRequest("/api/v1/movies?status=COMING_SOON", { 
           method: "GET" 
         });
         

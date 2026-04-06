@@ -35,7 +35,7 @@ export default function AdminShowtimePage() {
       const [resShow, resRoom, resMovie] = await Promise.all([
         apiRequest(`/api/v1/showtimes/cinema-item/${ID_RAP_GIA_LAP}`),
         apiRequest(`/api/v1/rooms/cinema-item/${ID_RAP_GIA_LAP}`),
-        apiRequest("/api/v1/movies"),
+        apiRequest("/api/v1/movies?status=SHOWING"),
       ]);
 
       if (resShow.ok && resRoom.ok && resMovie.ok) {

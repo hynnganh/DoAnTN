@@ -27,7 +27,7 @@ export default function ChiTietSuatChieu() {
       const [resShow, resRoom, resMovie] = await Promise.all([
         apiRequest(`/api/v1/showtimes/${id}`),
         apiRequest(`/api/v1/rooms/cinema-item/${ID_RAP_GIA_LAP}`),
-        apiRequest("/api/v1/movies"),
+        apiRequest("/api/v1/movies?status=SHOWING"),
       ]);
 
       if (resShow.ok) {

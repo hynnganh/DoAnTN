@@ -11,7 +11,7 @@ export default function PhimDangChieu() {
     const fetchMovies = async () => {
       try {
         // Lấy danh sách phim đang chiếu (SHOWING)
-        const response = await apiRequest("/api/v1/movies?status=SHOWING&page=0&size=50", { 
+        const response = await apiRequest("/api/v1/movies?status=SHOWING", { 
           method: "GET" 
         });
         
