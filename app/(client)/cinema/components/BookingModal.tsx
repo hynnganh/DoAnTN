@@ -139,11 +139,76 @@ export default function BookingModal({ info, onClose }: any) {
         )}
 
         {isSuccess && (
-          <div className="absolute inset-0 z-[120] bg-black/95 flex flex-col items-center justify-center animate-in fade-in duration-700 backdrop-blur-md">
-            <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-2xl shadow-green-500/50"><Check size={48} className="text-white stroke-[4]" /></div>
-            <h2 className="text-4xl font-[1000] text-white uppercase italic tracking-tighter">Đặt vé thành công!</h2>
-          </div>
-        )}
+  <div className="absolute inset-0 z-[120] bg-[#020202]/95 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700 backdrop-blur-2xl">
+    {/* Luồng sáng phía sau (Ambient Light) */}
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-green-600/10 blur-[150px] rounded-full pointer-events-none" />
+
+    <div className="relative flex flex-col items-center max-w-sm w-full px-6">
+      {/* Icon Section */}
+      <div className="relative mb-12">
+        <div className="absolute inset-0 bg-green-500 rounded-full blur-3xl opacity-30 animate-pulse" />
+        <div className="relative w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(34,197,94,0.4)] border-4 border-white/20">
+          <Check size={64} className="text-white stroke-[4] animate-in zoom-in spin-in-45 duration-700 delay-300" />
+        </div>
+        
+        {/* Decorative Circles */}
+        {[...Array(8)].map((_, i) => (
+          <div 
+            key={i} 
+            className="absolute w-1.5 h-1.5 bg-green-400 rounded-full animate-ping"
+            style={{
+              top: `${50 + 50 * Math.sin(i * 45 * Math.PI / 180)}%`,
+              left: `${50 + 50 * Math.cos(i * 45 * Math.PI / 180)}%`,
+              animationDelay: `${i * 100}ms`
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Nội dung chính */}
+      <div className="text-center space-y-3 mb-10 relative z-10">
+        <h2 className="text-5xl font-[1000] text-white uppercase italic tracking-tighter leading-tight drop-shadow-2xl">
+          PAYMENT <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-600">SUCCESS!</span>
+        </h2>
+        <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-green-500 to-transparent mx-auto" />
+        <p className="text-zinc-500 font-bold uppercase tracking-[0.4em] text-[9px] mt-4">
+          Giao dịch đã được xác thực
+        </p>
+      </div>
+
+      {/* Thẻ tóm tắt thông tin (Glass Card) - Tăng độ chuyên nghiệp */}
+      <div className="w-full bg-white/[0.03] border border-white/10 rounded-[2rem] p-6 backdrop-blur-md mb-10 space-y-4">
+        <div className="flex justify-between items-center border-b border-white/5 pb-3">
+          <span className="text-zinc-500 text-[10px] font-black uppercase italic">Trạng thái</span>
+          <span className="text-green-500 text-[10px] font-black uppercase tracking-widest">Hoàn tất</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-zinc-500 text-[10px] font-black uppercase italic">Thời gian</span>
+          <span className="text-white text-[10px] font-black">{new Date().toLocaleTimeString('vi-VN')}</span>
+        </div>
+        <div className="pt-2">
+            <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden">
+                <div className="w-full h-full bg-green-500 animate-in slide-in-from-left duration-1000" />
+            </div>
+        </div>
+      </div>
+
+      {/* Button Action */}
+      <button 
+        onClick={() => window.location.reload()}
+        className="group relative w-full overflow-hidden py-5 bg-white text-black rounded-2xl font-[1000] uppercase text-[12px] tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-95"
+      >
+        <span className="relative z-10">Tiếp tục quản lý</span>
+        <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      </button>
+    </div>
+
+    {/* Version Tag */}
+    <div className="absolute bottom-8 text-zinc-900 font-black uppercase text-[10px] tracking-[1.5em] select-none opacity-50">
+      Verified System 2026
+    </div>
+  </div>
+)}
 
         {/* HEADER */}
         <div className="px-10 py-6 border-b border-white/5 flex justify-between items-center bg-black/40">
@@ -154,24 +219,26 @@ export default function BookingModal({ info, onClose }: any) {
           <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-red-600 transition-all text-white"><X size={18}/></button>
         </div>
 
-        {/* CHÚ THÍCH (LEGEND) - Đưa ra ngoài SeatMap để không bị tràn */}
         {step === 1 && (
-          <div className="bg-black/20 border-b border-white/5 py-4 flex justify-center gap-8">
-            {[
-              { label: 'Thường', cls: 'bg-zinc-900 border-zinc-700' },
-              { label: 'VIP', cls: 'border-amber-600/50 text-amber-600 bg-zinc-900/40' },
-              { label: 'Đang chọn', cls: 'bg-red-600 border-red-600 text-white' },
-              { label: 'Đã đặt', cls: 'text-zinc-700 border-none' }
-            ].map((item) => (
-              <div key={item.label} className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded border text-[5px] flex items-center justify-center font-bold ${item.cls}`}>
-                  {item.label === 'Đã đặt' ? 'A1' : ''}
-                </div>
-                <span className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">{item.label}</span>
-              </div>
-            ))}
-          </div>
-        )}
+  <div className="bg-black/20 border-b border-white/5 py-4 flex justify-center gap-6 flex-wrap">
+    {[
+      { label: 'Thường', cls: 'bg-zinc-900 border-zinc-700' },
+      { label: 'VIP', cls: 'border-amber-600/50 text-amber-600 bg-zinc-900/40' },
+      // Thêm chú thích cho SWEETBOX ở đây
+      { label: 'Sweetbox', cls: 'border-pink-500/50 text-pink-500 bg-pink-500/10 w-8' }, 
+      { label: 'Đang chọn', cls: 'bg-red-600 border-red-600 text-white shadow-[0_0_10px_red]' },
+      { label: 'Đã đặt', cls: 'text-zinc-800 border-none italic opacity-40' }
+    ].map((item) => (
+      <div key={item.label} className="flex items-center gap-2">
+        <div className={`h-4 rounded border text-[5px] flex items-center justify-center font-bold transition-all ${item.cls} ${item.label !== 'Sweetbox' ? 'w-4' : ''}`}>
+          {item.label === 'Đã đặt' ? 'X' : ''}
+          {item.label === 'Sweetbox' ? '♥' : ''}
+        </div>
+        <span className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">{item.label}</span>
+      </div>
+    ))}
+  </div>
+)}
 
         {/* MAIN CONTENT */}
         <div className="flex-1 overflow-hidden relative bg-black">
@@ -191,12 +258,11 @@ export default function BookingModal({ info, onClose }: any) {
           )}
         </div>
 
-        {/* FOOTER */}
         {step === 1 && dbSeats.length > 0 && (
-          <div className="p-8 md:px-14 bg-[#080808] border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="pr-10 pl-14 bg-[#080808] border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
-                 <span className="text-[9px] text-zinc-600 font-black uppercase italic">Ghế đã chọn:</span>
+                 <span className="text-[5px] text-zinc-600 font-black uppercase italic">Ghế đã chọn:</span>
                  <div className="flex gap-2"> 
                     {selectedSeats.length > 0 ? selectedSeats.map(s => (<span key={s.id} className="text-red-600 font-[1000] italic text-xl">{s.seatLabel}</span>)) : <span className="text-zinc-800 italic text-sm">...</span>} 
                  </div>
@@ -208,7 +274,7 @@ export default function BookingModal({ info, onClose }: any) {
               <button 
                 onClick={handleProceedToPayment} 
                 disabled={selectedSeats.length === 0 || loading} 
-                className="px-14 py-5 bg-red-600 hover:bg-red-500 disabled:bg-zinc-900 disabled:text-zinc-500 text-white rounded-full font-[1000] uppercase text-[12px] shadow-xl transition-all"
+                className="px-5 py-2 bg-red-600 hover:bg-red-500 disabled:bg-zinc-900 disabled:text-zinc-500 text-white rounded-full font-[1000] uppercase text-[12px] shadow-xl transition-all"
               >
                 {loading ? "Đang xử lý..." : "Tiếp tục thanh toán"}
               </button>

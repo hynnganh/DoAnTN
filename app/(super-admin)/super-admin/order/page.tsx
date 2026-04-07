@@ -1,171 +1,168 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  ShieldCheck, MapPin, Search, Filter, 
-  BarChart3, Landmark, LayoutGrid, 
-  ChevronRight, Calendar, Hash, Building2
+  MapPin, Search, ChevronRight, Calendar, 
+  Hash, CreditCard, Ticket, Clock, Loader2, RefreshCcw
 } from 'lucide-react';
-
-// 1. MOCK DATA PHÂN CẤP: TP.HCM -> QUẬN -> RẠP
-const MOCK_HCM_ORDERS = [
-  { id: "GS-Q1-001", movie: "Kung Fu Panda 4", district: "Quận 1", cinema: "Golden Star - Bitexco", amount: 120000, time: "14:30", date: "05/04", status: "SUCCESS" },
-  { id: "GS-Q7-002", movie: "Dune: Part Two", district: "Quận 7", cinema: "Golden Star - Crescent Mall", amount: 250000, time: "19:00", date: "05/04", status: "SUCCESS" },
-  { id: "GS-BT-003", movie: "Exhuma", district: "Bình Thạnh", cinema: "Golden Star - Landmark 81", amount: 95000, time: "21:15", date: "04/04", status: "CANCELLED" },
-  { id: "GS-Q1-004", movie: "Mai", district: "Quận 1", cinema: "Golden Star - Hai Bà Trưng", amount: 180000, time: "10:00", date: "04/04", status: "SUCCESS" },
-  { id: "GS-GV-005", movie: "Quỷ Cẩu", district: "Gò Vấp", cinema: "Golden Star - Quang Trung", amount: 85000, time: "15:45", date: "05/04", status: "SUCCESS" },
-];
+import { apiRequest } from '@/app/lib/api'; // Giả sử bạn để hàm trên vào file này
 
 export default function SuperAdminHCMPage() {
-  const [selectedDistrict, setSelectedDistrict] = useState("ALL");
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Lấy danh sách các Quận duy nhất để làm filter
-  const districts = ["ALL", ...Array.from(new Set(MOCK_HCM_ORDERS.map(o => o.district)))];
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Sử dụng hàm apiRequest của bạn
+      const response = await apiRequest('/api/v1/orders', {
+        method: 'GET'
+      });
 
-  const filteredOrders = MOCK_HCM_ORDERS.filter(order => {
-    const matchDistrict = selectedDistrict === "ALL" || order.district === selectedDistrict;
-    const matchSearch = order.movie.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        order.cinema.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        order.id.includes(searchTerm);
-    return matchDistrict && matchSearch;
-  });
+      if (response.ok) {
+        const result = await response.json();
+        // Cấu trúc: { status: 0, message: "...", data: [...] }
+        setOrders(result.data || []);
+      } else {
+        console.error("Lỗi Protocol:", response.status);
+        // Nếu 403 -> Có thể token hết hạn hoặc sai Role
+        // Nếu 404 -> Link API sai hoặc Backend chưa chạy
+      }
+    } catch (error) {
+      console.error("Network Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  // Lọc dữ liệu sau khi đã fetch thành công
+  const filteredOrders = orders.filter(order => 
+    order.id.toString().includes(searchTerm) ||
+    order.paymentMethod?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-[#050505] text-white p-6 md:p-10 font-sans tracking-tight">
       
-      {/* HEADER: PHẠM VI TP.HCM */}
+      {/* HEADER & REFRESH */}
       <div className="flex items-center justify-between mb-10 border-b border-white/5 pb-8">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-red-600/10 border border-red-600/20 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.1)]">
+          <div className="p-3 bg-red-600/10 border border-red-600/20 rounded-2xl">
             <MapPin className="text-red-600" size={24} />
           </div>
           <div>
             <h1 className="text-3xl font-[1000] uppercase italic tracking-tighter">
-              Khu vực <span className="text-red-600">TP. Hồ Chí Minh</span>
+              Khu vực <span className="text-red-600">Hồ Chí Minh</span>
             </h1>
-            <p className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.4em] mt-1 italic">
-              Quản lý mạng lưới rạp theo Quận/Huyện
+            <p className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.4em] mt-1">
+              Hệ thống truy xuất dữ liệu thực tế
             </p>
           </div>
         </div>
 
-        <div className="hidden lg:flex gap-10">
-            <div className="text-right border-r border-white/5 pr-8">
-                <p className="text-[8px] font-black text-zinc-700 uppercase italic mb-1 text-nowrap">Tổng đơn hôm nay</p>
-                <p className="text-2xl font-[1000] italic text-white leading-none">1,284</p>
-            </div>
-            <div className="text-right">
-                <p className="text-[8px] font-black text-zinc-700 uppercase italic mb-1 text-nowrap">Doanh thu HCM</p>
-                <p className="text-2xl font-[1000] italic text-emerald-500 leading-none">542.000.000đ</p>
-            </div>
-        </div>
+        <button 
+          onClick={fetchOrders}
+          className="p-4 bg-zinc-900 border border-white/5 rounded-2xl hover:text-red-500 transition-all active:scale-95"
+        >
+          <RefreshCcw size={20} className={loading ? "animate-spin" : ""} />
+        </button>
       </div>
 
-      {/* TOOLBAR: LỌC THEO QUẬN & TÌM KIẾM */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
-        <div className="flex-1 relative group">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-700 group-focus-within:text-red-600 transition-colors" size={18} />
-          <input 
-            type="text" 
-            placeholder="Tìm mã vé, tên phim hoặc tên rạp..."
-            className="w-full bg-zinc-900/30 border border-white/5 rounded-2xl py-4 pl-14 pr-4 text-[11px] font-bold outline-none focus:border-red-600/50 focus:bg-zinc-900/50 transition-all"
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        <div className="flex bg-zinc-900/30 border border-white/5 rounded-2xl p-1 gap-1">
-          {districts.map((d) => (
-            <button
-              key={d}
-              onClick={() => setSelectedDistrict(d)}
-              className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${
-                selectedDistrict === d ? 'bg-white text-black shadow-lg' : 'text-zinc-600 hover:text-zinc-300'
-              }`}
-            >
-              {d === "ALL" ? "Tất cả Quận" : d}
-            </button>
-          ))}
-        </div>
+      {/* SEARCH TOOLBAR */}
+      <div className="relative mb-8 group">
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-700 group-focus-within:text-red-600 transition-colors" size={18} />
+        <input 
+          type="text" 
+          placeholder="TÌM KIẾM MÃ ĐƠN, TRẠNG THÁI..."
+          className="w-full bg-zinc-900/30 border border-white/5 rounded-2xl py-4 pl-14 pr-4 text-[11px] font-bold outline-none focus:border-red-600/50"
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
-      {/* DANH SÁCH ĐƠN HÀNG DẠNG BẢNG HIỆN ĐẠI */}
-      <div className="bg-zinc-950/40 border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-xl">
+      {/* DATA TABLE */}
+      <div className="bg-zinc-950/40 border border-white/5 rounded-[2.5rem] overflow-hidden relative min-h-[400px]">
+        {loading && (
+          <div className="absolute inset-0 bg-black/60 z-10 flex items-center justify-center">
+            <Loader2 className="animate-spin text-red-600" size={40} />
+          </div>
+        )}
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white/[0.02] border-b border-white/5">
-                <th className="p-6 text-[9px] font-black uppercase text-zinc-700 tracking-widest italic">Mã Đơn</th>
-                <th className="p-6 text-[9px] font-black uppercase text-zinc-700 tracking-widest italic">Phim & Thời gian</th>
-                <th className="p-6 text-[9px] font-black uppercase text-zinc-700 tracking-widest italic">Địa điểm</th>
-                <th className="p-6 text-[9px] font-black uppercase text-zinc-700 tracking-widest italic text-right">Tổng thanh toán</th>
-                <th className="p-6 text-[9px] font-black uppercase text-zinc-700 tracking-widest italic text-right">Chi tiết</th>
+                <th className="p-6 text-[9px] font-black uppercase text-zinc-700 italic">Giao dịch</th>
+                <th className="p-6 text-[9px] font-black uppercase text-zinc-700 italic">Items</th>
+                <th className="p-6 text-[9px] font-black uppercase text-zinc-700 italic">Phương thức</th>
+                <th className="p-6 text-[9px] font-black uppercase text-zinc-700 italic text-right">Tổng tiền</th>
+                <th className="p-6 text-[9px] font-black uppercase text-zinc-700 italic text-right">Chi tiết</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-white/[0.02] transition-all group">
+              {filteredOrders.length > 0 ? filteredOrders.map((order) => (
+                <tr key={order.id} className="hover:bg-white/[0.01] group transition-all">
                   <td className="p-6">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center border border-white/5 text-zinc-800 group-hover:text-red-600 transition-colors">
-                          <Hash size={16} />
+                      <div className="w-10 h-10 rounded-xl bg-black border border-white/5 flex items-center justify-center text-zinc-800 group-hover:text-red-600">
+                        <Hash size={16} />
                       </div>
-                      <span className="text-xs font-black italic tracking-tight">{order.id}</span>
-                    </div>
-                  </td>
-                  <td className="p-6">
-                    <div>
-                      <p className="text-sm font-black uppercase italic tracking-tighter group-hover:text-red-500 transition-colors">{order.movie}</p>
-                      <div className="flex items-center gap-3 mt-1 text-zinc-600 text-[10px] font-bold uppercase italic">
-                          <span className="flex items-center gap-1"><Calendar size={10}/> {order.date}</span>
-                          <span className="w-1 h-1 bg-zinc-800 rounded-full"></span>
-                          <span>{order.time}</span>
+                      <div>
+                        <p className="text-xs font-black italic tracking-tight">#{order.id}</p>
+                        <p className="text-[8px] font-bold text-zinc-600 uppercase mt-1">
+                           {new Date(order.createdAt).toLocaleDateString()} • {new Date(order.createdAt).toLocaleTimeString()}
+                        </p>
                       </div>
                     </div>
                   </td>
                   <td className="p-6">
-                     <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                            <Building2 size={12} className="text-red-600" />
-                            <span className="text-[10px] font-black uppercase text-zinc-300 italic tracking-tight">{order.cinema}</span>
+                    <div className="flex flex-col gap-1.5">
+                      {order.orderDetails?.map((item: any) => (
+                        <div key={item.id} className="flex items-center gap-2">
+                          <Ticket size={12} className="text-red-700" />
+                          <span className="text-[10px] font-black uppercase italic text-zinc-400">
+                             {item.itemType} <span className="text-zinc-600 ml-1">x{item.quantity}</span>
+                          </span>
                         </div>
-                        <span className="text-[8px] font-black text-zinc-600 uppercase ml-5 tracking-widest">{order.district}</span>
-                     </div>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="p-6">
+                    <div className="flex items-center gap-2">
+                      <CreditCard size={14} className="text-zinc-700" />
+                      <span className="text-[10px] font-black uppercase text-zinc-500 italic">
+                        {order.paymentMethod}
+                      </span>
+                    </div>
                   </td>
                   <td className="p-6 text-right">
-                    <p className="text-base font-[1000] italic text-zinc-200">{order.amount.toLocaleString()}đ</p>
-                    <span className={`text-[8px] font-black uppercase tracking-tighter italic ${order.status === 'SUCCESS' ? 'text-emerald-500' : 'text-zinc-700'}`}>
-                        {order.status === 'SUCCESS' ? '• Hoàn tất' : '• Đã hủy'}
+                    <p className="text-base font-[1000] italic text-zinc-100">
+                      {order.totalAmount?.toLocaleString()}đ
+                    </p>
+                    <span className={`text-[8px] font-black uppercase italic ${order.status === 'SUCCESS' ? 'text-emerald-500' : 'text-zinc-700'}`}>
+                      • {order.status}
                     </span>
                   </td>
                   <td className="p-6 text-right">
-                      {/* Super Admin chỉ Xem (✅) */}
-                      <button className="w-10 h-10 inline-flex items-center justify-center bg-zinc-900 hover:bg-white hover:text-black rounded-xl transition-all shadow-xl group-hover:scale-110 active:scale-90">
-                          <ChevronRight size={18} />
-                      </button>
+                    <button className="w-10 h-10 inline-flex items-center justify-center bg-zinc-900 hover:bg-white hover:text-black rounded-xl transition-all">
+                      <ChevronRight size={18} />
+                    </button>
                   </td>
                 </tr>
-              ))}
+              )) : !loading && (
+                <tr>
+                  <td colSpan={5} className="p-20 text-center text-[10px] font-black uppercase text-zinc-800 tracking-[0.5em] italic">
+                    Node: No Data Found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* FOOTER ĐIỀU HƯỚNG */}
-      <div className="mt-8 flex flex-col md:flex-row justify-between items-center px-4 gap-6">
-          <div className="flex items-center gap-3">
-            <div className="flex -space-x-2">
-                {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full border-2 border-black bg-zinc-800 flex items-center justify-center text-[8px] font-black text-zinc-500">{i}</div>)}
-            </div>
-            <p className="text-[9px] font-black uppercase text-zinc-800 tracking-[0.3em] italic">
-              Đang quản lý {filteredOrders.length} điểm rạp khu vực HCM
-            </p>
-          </div>
-          
-          <div className="flex gap-4">
-              <button className="bg-zinc-900 border border-white/5 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase text-zinc-500 hover:text-white transition-all">Trước</button>
-              <button className="bg-red-600 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase text-white hover:bg-red-500 transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)]">Tiếp theo</button>
-          </div>
       </div>
     </div>
   );

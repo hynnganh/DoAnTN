@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, ShieldAlert, Loader2, RefreshCw, 
-  Users, ShieldCheck, X, Building2, Check
+  ShieldCheck, X, Building2, Check, User as UserIcon
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { apiRequest } from '@/app/lib/api'; 
@@ -14,12 +14,11 @@ export default function SuperAdminUserPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"ALL" | "ADMIN" | "USER">("ALL");
 
-  // State cho Modal phân quyền
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedRole, setSelectedRole] = useState("USER");
-  const [selectedCinema, setSelectedCinema] = useState<string>("");
-  const [cinemaSearch, setCinemaSearch] = useState(""); // Tìm kiếm rạp trong modal
+  const [selectedCinema, setSelectedCinema] = useState<number | string>("");
+  const [cinemaSearch, setCinemaSearch] = useState("");
 
   const fetchData = async () => {
     try {
@@ -30,10 +29,11 @@ export default function SuperAdminUserPage() {
       ]);
       const userData = await userRes.json();
       const cinemaData = await cinemaRes.json();
-      setUsers(userData.data?.content || userData.data || userData);
-      setCinemas(cinemaData.data || cinemaData);
+      
+      setUsers(userData.data?.content || userData.data || []);
+      setCinemas(cinemaData.data || []);
     } catch (err) {
-      toast.error("Lỗi đồng bộ dữ liệu!");
+      toast.error("Lỗi đồng bộ dữ liệu hệ thống!");
     } finally {
       setLoading(false);
     }
@@ -42,94 +42,136 @@ export default function SuperAdminUserPage() {
   useEffect(() => { fetchData(); }, []);
 
   const openRoleModal = (user: any) => {
-    const isAdmin = user.roles?.some((r: any) => r.roleName === 'ROLE_ADMIN');
+    // FIX: Kiểm tra role từ mảng string ["ROLE_ADMIN", ...]
+    const isAdmin = user.roles?.includes('ROLE_ADMIN');
     setSelectedUser(user);
     setSelectedRole(isAdmin ? "ADMIN" : "USER");
-    setSelectedCinema(user.managedCinemaId || ""); 
-    setCinemaSearch(""); // Reset tìm kiếm rạp khi mở mới
+    // Giả định backend trả về cinemaId người đó đang quản lý (nếu có)
+    setSelectedCinema(user.cinemaId || ""); 
+    setCinemaSearch("");
     setIsModalOpen(true);
   };
 
   const handleUpdateRole = async () => {
-    const loadingToast = toast.loading("Đang thực thi lệnh...");
+    if (selectedRole === "ADMIN" && !selectedCinema) {
+      return toast.error("Vui lòng chỉ định rạp cho Admin!");
+    }
+
+    const loadingToast = toast.loading("Đang thực thi lệnh phân quyền...");
     try {
+      // Endpoint và Body khớp với nghiệp vụ assign-role
       const res = await apiRequest(`/api/v1/users/${selectedUser.userId}/assign-role`, {
         method: 'PATCH',
         body: JSON.stringify({ 
-          role: selectedRole,
-          cinemaId: selectedRole === "ADMIN" ? selectedCinema : null 
+          role: selectedRole, // "ADMIN" hoặc "USER"
+          cinemaId: selectedRole === "ADMIN" ? Number(selectedCinema) : null 
         })
       });
+
       if (res.ok) {
-        toast.success("Cấu hình hoàn tất!", { id: loadingToast });
+        toast.success("Cấu hình nhân sự hoàn tất!", { id: loadingToast });
         setIsModalOpen(false);
         fetchData();
+      } else {
+        const errorData = await res.json();
+        toast.error(errorData.message || "Không thể cấp quyền!", { id: loadingToast });
       }
     } catch (err) {
-      toast.error("Lỗi máy chủ!", { id: loadingToast });
+      toast.error("Lỗi kết nối máy chủ!", { id: loadingToast });
     }
   };
 
-  // Lọc rạp trong modal
+  // Logic lọc User theo Tab và Search
+  const filteredUsers = users.filter(u => {
+    const matchSearch = (u.firstName + u.lastName + u.email).toLowerCase().includes(searchTerm.toLowerCase());
+    if (activeTab === "ALL") return matchSearch;
+    if (activeTab === "ADMIN") return u.roles?.includes("ROLE_ADMIN") && matchSearch;
+    if (activeTab === "USER") return !u.roles?.includes("ROLE_ADMIN") && matchSearch;
+    return matchSearch;
+  });
+
   const filteredCinemas = cinemas.filter(c => 
     c.name.toLowerCase().includes(cinemaSearch.toLowerCase())
   );
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white p-2 md:p-5 font-sans selection:bg-red-600/30">
+    <div className="min-h-screen bg-[#050505] text-white p-4 md:p-10 font-sans selection:bg-red-600/30">
       <Toaster position="top-right" />
       
-      {/* Header & Main Search */}
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-        <div className="flex items-center gap-3">
-          <ShieldAlert className="text-red-600" size={28} />
-          <h1 className="text-2xl font-black uppercase italic tracking-tighter">Nhân Sự <span className="text-red-600">Hệ Thống</span></h1>
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <ShieldAlert className="text-red-600" size={24} />
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">SuperAdmin Terminal</span>
+          </div>
+          <h1 className="text-4xl font-[1000] uppercase italic tracking-tighter leading-none">
+            Nhân Sự <span className="text-red-600">Hệ Thống</span>
+          </h1>
         </div>
-        <div className="flex bg-zinc-900/50 p-1 rounded-xl border border-white/5">
-          {["ALL", "ADMIN", "USER"].map((t) => (
-            <button key={t} onClick={() => setActiveTab(t as any)} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === t ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>
-              {t === "ALL" ? "Tất cả" : t === "ADMIN" ? "Quản trị" : "Hội viên"}
-            </button>
-          ))}
+
+        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+           {/* Thanh tìm kiếm trưởng thành hơn */}
+           <div className="relative group w-full md:w-72">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700 group-focus-within:text-red-600 transition-colors" size={14} />
+            <input 
+              type="text"
+              placeholder="SEARCH IDENTITIES..."
+              className="w-full bg-zinc-900/30 border border-white/5 rounded-xl py-3 pl-11 pr-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-red-600/40 transition-all"
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="flex bg-zinc-900/50 p-1 rounded-xl border border-white/5">
+            {["ALL", "ADMIN", "USER"].map((t) => (
+              <button key={t} onClick={() => setActiveTab(t as any)} className={`px-6 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${activeTab === t ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-zinc-600 hover:text-white'}`}>
+                {t === "ALL" ? "Tất cả" : t === "ADMIN" ? "Quản trị" : "Hội viên"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-<div className="relative mt-6 mb-5 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-red-500 transition-colors" size={16} />
-                    <input 
-                      type="text"
-                      value={searchTerm}
-                      placeholder="Tìm theo tên....."
-                      className="bg-zinc-900/50 border border-white/5 rounded-2xl pl-12 pr-6 py-4 text-xs text-white focus:outline-none focus:border-red-500/50 w-80 transition-all focus:bg-zinc-900 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)]"
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-      {/* Bảng Danh Sách Người Dùng */}
-      <div className="max-w-6xl mx-auto bg-[#080808] border border-white/5 rounded-2xl overflow-hidden shadow-2xl mb-10">
-        
+
+      <div className="max-w-6xl mx-auto bg-[#080808] border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl">
         <table className="w-full text-left">
-          <thead className="bg-white/[0.02] text-[9px] font-black uppercase text-zinc-600 tracking-widest border-b border-white/5">
+          <thead className="bg-white/[0.01] text-[9px] font-black uppercase text-zinc-600 tracking-[0.2em] border-b border-white/5">
             <tr>
-              <th className="p-5">Thành viên</th>
-              <th className="p-5">Cấp bậc</th>
-              <th className="p-5 text-right">Lệnh</th>
+              <th className="p-8">Thành viên</th>
+              <th className="p-8">Vai trò & Vị trí</th>
+              <th className="p-8 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.02]">
             {loading ? (
-              <tr><td colSpan={3} className="p-20 text-center"><Loader2 className="animate-spin mx-auto text-red-600" /></td></tr>
-            ) : users.filter(u => u.email.toLowerCase().includes(searchTerm.toLowerCase())).map((user: any) => (
-              <tr key={user.userId} className="hover:bg-white/[0.01] transition-colors group">
-                <td className="p-5 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-red-600 font-black italic shadow-inner">{user.firstName?.charAt(0)}</div>
-                  <div><p className="text-xs font-black uppercase tracking-tight leading-tight">{user.firstName} {user.lastName}</p><p className="text-[10px] text-zinc-500 font-medium">{user.email}</p></div>
+              <tr><td colSpan={3} className="p-32 text-center"><Loader2 className="animate-spin mx-auto text-red-600" size={32} /></td></tr>
+            ) : filteredUsers.map((user: any) => (
+              <tr key={user.userId} className="hover:bg-white/[0.01] transition-all group">
+                <td className="p-8">
+                  <div className="flex items-center gap-5">
+                    <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-red-600 font-black text-xl italic shadow-inner group-hover:border-red-600/30 transition-all">
+                      {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover rounded-2xl" /> : user.firstName?.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-black uppercase italic tracking-tight group-hover:text-red-500 transition-colors">{user.firstName} {user.lastName}</p>
+                      <p className="text-[10px] text-zinc-600 font-bold tracking-widest mt-1">{user.email}</p>
+                    </div>
+                  </div>
                 </td>
-                <td className="p-5">
-                   <div className={`inline-block px-3 py-1 rounded-md text-[8px] font-black uppercase border ${user.roles?.some((r: any) => r.roleName === 'ROLE_ADMIN') ? 'border-red-600/30 text-red-500 bg-red-600/5' : 'border-zinc-800 text-zinc-600'}`}>
-                      {user.roles?.some((r: any) => r.roleName === 'ROLE_ADMIN') ? 'Quản trị viên' : 'Thành viên'}
+                <td className="p-8">
+                   <div className="flex flex-col gap-2">
+                      <div className={`w-fit px-3 py-1 rounded-md text-[8px] font-black uppercase border ${user.roles?.includes('ROLE_ADMIN') ? 'border-red-600/30 text-red-500 bg-red-600/5' : 'border-zinc-800 text-zinc-600'}`}>
+                        {user.roles?.includes('ROLE_ADMIN') ? 'Quản trị hệ thống' : 'Khách hàng'}
+                      </div>
+                      {user.roles?.includes('ROLE_ADMIN') && (
+                        <div className="flex items-center gap-1.5 text-[9px] text-zinc-500 font-bold italic">
+                           <Building2 size={10} className="text-zinc-700"/> {user.managedCinemaName || "Chưa gán rạp"}
+                        </div>
+                      )}
                    </div>
                 </td>
-                <td className="p-5 text-right">
-                  <button onClick={() => openRoleModal(user)} className="bg-zinc-900 px-4 py-2 rounded-lg text-[9px] font-black uppercase border border-white/5 hover:bg-white hover:text-black hover:scale-105 active:scale-95 transition-all shadow-xl">Thiết lập</button>
+                <td className="p-8 text-right">
+                  <button onClick={() => openRoleModal(user)} className="bg-zinc-900 px-6 py-3 rounded-xl text-[9px] font-black uppercase border border-white/5 hover:bg-white hover:text-black transition-all group-hover:scale-105 active:scale-95">
+                    Phân quyền
+                  </button>
                 </td>
               </tr>
             ))}
@@ -137,75 +179,78 @@ export default function SuperAdminUserPage() {
         </table>
       </div>
 
-      {/* --- MODAL PHÂN QUYỀN (FIX GIAO DIỆN XINH XINH) --- */}
+      {/* MODAL PHÂN QUYỀN */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-black/95 backdrop-blur-md" onClick={() => setIsModalOpen(false)}></div>
-          <div className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-[340px] rounded-[2rem] p-8 shadow-[-20px_0_60px_rgba(0,0,0,0.7)] overflow-hidden">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
+          <div className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-[380px] rounded-[2.5rem] p-10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h2 className="text-xl font-black uppercase italic text-white tracking-tighterleading-none">Cấp Quyền <span className="text-red-600">Node</span></h2>
-                <p className="text-[9px] text-zinc-600 font-bold uppercase mt-1.5 tracking-widest">{selectedUser?.email}</p>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-white/5 rounded-full transition-colors text-zinc-600 hover:text-white"><X size={16}/></button>
+            <div className="mb-8">
+              <h2 className="text-2xl font-[1000] uppercase italic text-white tracking-tighter leading-none">Access <span className="text-red-600">Control</span></h2>
+              <p className="text-[10px] text-zinc-600 font-bold uppercase mt-2 tracking-widest truncate">{selectedUser?.email}</p>
             </div>
 
-            <div className="space-y-6">
-              {/* Chọn vai trò - Gọn gàng */}
-              <div className="grid grid-cols-2 gap-2 p-1 bg-zinc-900 rounded-lg border border-white/5">
+            <div className="space-y-8">
+              {/* Chọn vai trò */}
+              <div className="grid grid-cols-2 gap-3 p-1.5 bg-zinc-900/50 rounded-2xl border border-white/5">
                 {["USER", "ADMIN"].map((role) => (
                   <button 
                     key={role}
                     onClick={() => setSelectedRole(role)}
-                    className={`py-2.5 rounded-md text-[9px] font-black uppercase transition-all ${selectedRole === role ? 'bg-red-600 text-white shadow-lg' : 'text-zinc-600 hover:text-white'}`}
+                    className={`py-3.5 rounded-xl text-[10px] font-black uppercase transition-all ${selectedRole === role ? 'bg-red-600 text-white shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}
                   >
-                    {role === "ADMIN" ? "Quản trị" : "Hội viên"}
+                    {role === "ADMIN" ? "Quản trị" : "Thành viên"}
                   </button>
                 ))}
               </div>
 
-              {/* Tìm kiếm & Chọn Rạp - FIX XINH XINH */}
+              {/* Chỉ định rạp (Chỉ khi là ADMIN) */}
               {selectedRole === "ADMIN" && (
-                <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-500">
-                   <p className="text-[9px] font-black uppercase text-zinc-600 tracking-widest flex items-center gap-2"><Building2 size={10} className="text-red-600"/> Chỉ định rạp quản lý</p>
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                   <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest flex items-center gap-2">
+                     <Building2 size={12} className="text-red-600"/> Cơ sở quản lý
+                   </p>
                   
-                  {/* Ô tìm kiếm nhỏ nhắn xinh xinh */}
-                  <div className="relative group/search border-b border-white/5 focus-within:border-red-600/50 transition-colors">
-                    <Search size={12} className="absolute left-1 top-1/2 -translate-y-1/2 text-zinc-700 group-focus-within/search:text-red-600 transition-colors" />
+                  <div className="relative border-b border-white/5 focus-within:border-red-600/50 transition-colors">
+                    <Search size={12} className="absolute left-0 top-1/2 -translate-y-1/2 text-zinc-800" />
                     <input 
                       type="text" 
-                      placeholder="Tìm nhanh tên rạp..." 
-                      className="w-full bg-transparent py-2 pl-6 pr-2 text-[10px] font-bold outline-none placeholder:text-zinc-800 placeholder:font-medium text-white"
+                      placeholder="TÌM KIẾM RẠP..." 
+                      className="w-full bg-transparent py-3 pl-6 pr-2 text-[10px] font-black outline-none text-white uppercase tracking-widest placeholder:text-zinc-800"
                       value={cinemaSearch}
                       onChange={(e) => setCinemaSearch(e.target.value)}
                     />
                   </div>
 
-                  {/* Danh sách rạp - Gọn nhẹ */}
-                  <div className="max-h-[140px] overflow-y-auto space-y-0.5 custom-scrollbar-mini pr-1">
-                    {filteredCinemas.length > 0 ? filteredCinemas.map((c) => (
+                  <div className="max-h-[160px] overflow-y-auto space-y-1 custom-scrollbar-mini pr-2">
+                    {filteredCinemas.map((c) => (
                       <button
                         key={c.cinemaId}
                         onClick={() => setSelectedCinema(c.cinemaId)}
-                        className={`w-full flex items-center justify-between p-2.5 rounded-md text-[10px] font-bold transition-all ${selectedCinema == c.cinemaId ? 'bg-red-600/10 text-white' : 'bg-transparent text-zinc-500 hover:bg-white/[0.02] hover:text-zinc-200'}`}
+                        className={`w-full flex items-center justify-between p-3.5 rounded-xl text-[10px] font-black uppercase transition-all ${selectedCinema == c.cinemaId ? 'bg-red-600/10 text-white border border-red-600/20' : 'bg-transparent text-zinc-600 hover:bg-white/[0.03]'}`}
                       >
-                        <span className="line-clamp-1">{c.name}</span>
-                        {selectedCinema == c.cinemaId && <Check size={12} className="text-red-600 shrink-0" />}
+                        <span className="truncate pr-2">{c.name}</span>
+                        {selectedCinema == c.cinemaId && <Check size={14} className="text-red-600 shrink-0" />}
                       </button>
-                    )) : (
-                      <p className="text-center py-4 text-[9px] text-zinc-800 font-bold uppercase tracking-widest italic">Không có dữ liệu rạp</p>
-                    )}
+                    ))}
                   </div>
                 </div>
               )}
 
-              <button 
-                onClick={handleUpdateRole}
-                className="w-full bg-white text-black py-4 rounded-xl font-[1000] uppercase text-[10px] tracking-[0.2em] mt-2 hover:bg-red-600 hover:text-white transition-all active:scale-95 flex items-center justify-center gap-2 shadow-2xl shadow-red-600/10"
-              >
-                Xác nhận cấp quyền <Check size={16}/>
-              </button>
+              <div className="pt-4">
+                <button 
+                  onClick={handleUpdateRole}
+                  className="w-full bg-white text-black py-5 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] hover:bg-red-600 hover:text-white transition-all shadow-2xl shadow-red-600/20 flex items-center justify-center gap-3"
+                >
+                  Confirm Assignment <Check size={18}/>
+                </button>
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="w-full mt-4 text-[10px] font-black uppercase text-zinc-700 hover:text-zinc-500 tracking-widest transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

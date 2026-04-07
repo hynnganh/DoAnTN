@@ -1,29 +1,43 @@
 "use client";
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, MapPin, Loader2, ChevronRight, Calendar, Film, Clock, Ticket } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, MapPin, Loader2, Clock, Ticket, ChevronRight, Star } from 'lucide-react';
 import BookingModal from './components/BookingModal';
 import { apiRequest } from '@/app/lib/api';
 
 const MovieShowtimeItem = ({ movie, onSelect }: any) => (
-  <div className="flex flex-col md:flex-row gap-5 p-5 rounded-[2rem] bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
+  <div className="group flex gap-4 p-4 rounded-[2rem] bg-zinc-900/30 border border-white/5 hover:border-red-600/30 hover:bg-zinc-900/60 transition-all duration-300">
+    {/* Poster Nhỏ Gọn */}
     <div className="relative shrink-0">
-      <div className="w-20 h-28 md:w-24 md:h-36 rounded-2xl overflow-hidden bg-zinc-800 shadow-2xl">
-        <img src={movie.image || ""} className="w-full h-full object-cover" alt={movie.title} />
+      <div className="w-24 h-36 rounded-2xl overflow-hidden shadow-xl">
+        <img src={movie.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={movie.title} />
       </div>
-      <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-red-600 text-[8px] font-black text-white uppercase">{movie.tag || "T18"}</span>
+      <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-lg bg-red-600 text-[8px] font-black text-white italic">
+        {movie.tag}
+      </div>
     </div>
-    <div className="flex-1 space-y-4">
-      <h4 className="text-base md:text-lg font-[1000] italic uppercase tracking-tighter text-white">{movie.title}</h4>
-      <div className="space-y-4">
+
+    {/* Nội dung tinh gọn */}
+    <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+      <div>
+        <h4 className="text-base font-black uppercase italic tracking-tighter text-white truncate group-hover:text-red-500 transition-colors">
+          {movie.title}
+        </h4>
+        <div className="flex items-center gap-3 mt-1 opacity-50">
+          <span className="text-[9px] font-bold uppercase tracking-widest flex items-center gap-1"><Clock size={10} /> {movie.duration}'</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest flex items-center gap-1"><Star size={10} className="fill-red-600 text-red-600" /> {movie.genre}</span>
+        </div>
+      </div>
+
+      <div className="space-y-3 mt-3">
         {movie.formats?.map((f: any, i: number) => (
-          <div key={i} className="space-y-2">
-            <span className="text-[8px] font-black text-zinc-600 uppercase flex items-center gap-1.5"><Ticket size={10} className="text-red-600" /> {f.type}</span>
+          <div key={i} className="flex flex-col gap-2">
+            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">{f.type}</span>
             <div className="flex flex-wrap gap-2">
               {f.times.map((st: any) => (
                 <button 
                   key={st.id} 
                   onClick={() => onSelect(movie, st, f.type)} 
-                  className="px-4 py-2 rounded-xl bg-zinc-900 border border-white/5 text-[10px] font-black hover:bg-red-600 transition-all active:scale-95"
+                  className="px-4 py-2 rounded-xl bg-zinc-800 border border-white/5 text-[10px] font-black text-zinc-300 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all active:scale-90"
                 >
                   {st.time}
                 </button>
@@ -38,8 +52,6 @@ const MovieShowtimeItem = ({ movie, onSelect }: any) => (
 
 export default function Cinema() {
   const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => { setIsMounted(true); }, []);
-
   const [cinemas, setCinemas] = useState<any[]>([]);
   const [movies, setMovies] = useState<any[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -49,16 +61,19 @@ export default function Cinema() {
   const [fetchingShowtimes, setFetchingShowtimes] = useState(false);
   const [booking, setBooking] = useState<any>(null);
 
-  useEffect(() => { if (isMounted) setSelectedDate(new Date().toISOString().split('T')[0]); }, [isMounted]);
+  useEffect(() => { 
+    setIsMounted(true); 
+    setSelectedDate(new Date().toISOString().split('T')[0]);
+  }, []);
 
   useEffect(() => {
     const fetchCinemas = async () => {
       try {
         const res = await apiRequest('/api/v1/cinemas');
         const result = await res.json();
-        const list = result.data || result;
+        const list = result.data || [];
         setCinemas(list);
-        if (list?.length > 0) setSelectedId(list[0].id);
+        if (list.length > 0) setSelectedId(list[0].id);
       } catch (e) { console.error(e); } finally { setLoading(false); }
     };
     fetchCinemas();
@@ -76,80 +91,104 @@ export default function Cinema() {
           const grouped = filtered.reduce((acc: any, curr: any) => {
             const m = curr.movie;
             if (!m) return acc;
-            if (!acc[m.id]) acc[m.id] = { id: m.id, title: m.title, image: m.imageUrl, tag: m.ageTag, formats: {} };
-            const type = curr.room?.type || "2D PHỤ ĐỀ";
+            if (!acc[m.id]) acc[m.id] = { id: m.id, title: m.title, image: m.posterUrl, duration: m.duration, genre: m.genre?.name, tag: m.rating >= 18 ? "T18" : "T13", formats: {} };
+            const type = curr.room?.name?.includes("IMAX") ? "IMAX 3D" : "2D DIGITAL";
             if (!acc[m.id].formats[type]) acc[m.id].formats[type] = [];
-            const timeStr = new Date(curr.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
-            
-            // QUAN TRỌNG: Lưu ID của suất chiếu (curr.id)
-            acc[m.id].formats[type].push({ id: curr.id, time: timeStr, roomId: curr.room?.id });
+            acc[m.id].formats[type].push({ id: curr.id, time: new Date(curr.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }), roomId: curr.room?.id });
             return acc;
           }, {});
           setMovies(Object.values(grouped).map((m: any) => ({ ...m, formats: Object.entries(m.formats).map(([type, times]) => ({ type, times })) })));
-        } else { setMovies([]); }
+        } else setMovies([]);
       } catch (e) { setMovies([]); } finally { setFetchingShowtimes(false); }
     };
     fetchShowtimes();
   }, [selectedId, selectedDate]);
 
   const dateTabs = useMemo(() => {
-    const VI_DAYS = ["CN", "TH 2", "TH 3", "TH 4", "TH 5", "TH 6", "TH 7"];
-    return [...Array(10)].map((_, i) => {
+    const VI_DAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+    return [...Array(7)].map((_, i) => {
       const d = new Date(); d.setDate(d.getDate() + i);
       return { id: d.toISOString().split('T')[0], dayName: i === 0 ? "Hôm nay" : VI_DAYS[d.getDay()], dateNum: d.getDate() };
     });
   }, []);
 
-  if (!isMounted || loading) return <div className="h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-red-600" /></div>;
+  if (!isMounted || loading) return <div className="h-screen bg-[#050505] flex items-center justify-center"><Loader2 className="animate-spin text-red-600" size={32} /></div>;
 
   return (
-    <div className="bg-[#050505] min-h-screen pt-16 pb-12 px-4 text-white">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <aside className="lg:col-span-4 space-y-4">
-            <input onChange={e => setSearchTerm(e.target.value)} placeholder="TÌM RẠP..." className="w-full bg-zinc-900/50 border border-white/5 py-4 px-6 rounded-2xl text-[11px] font-bold outline-none" />
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
-              {cinemas.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map((c) => (
-                <div key={c.id} onClick={() => setSelectedId(c.id)} className={`p-4 rounded-2xl border cursor-pointer transition-all ${selectedId === c.id ? 'bg-red-600 border-red-600 shadow-xl' : 'bg-zinc-900/30 border-white/5 hover:border-white/10'}`}>
-                   <h3 className="text-sm font-black italic uppercase">{c.name}</h3>
+    <div className="bg-[#050505] min-h-screen pt-20 pb-10 px-4 text-zinc-400">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* Sidebar Rạp - Gọn gàng */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-red-600 transition-colors" size={14} />
+            <input 
+              onChange={e => setSearchTerm(e.target.value)} 
+              placeholder="Tìm nhanh rạp..." 
+              className="w-full bg-zinc-900/50 border border-white/5 py-3.5 pl-12 pr-4 rounded-2xl text-[11px] font-bold outline-none focus:border-red-600/50 transition-all" 
+            />
+          </div>
+
+          <div className="space-y-2 max-h-[500px] overflow-y-auto no-scrollbar">
+            {cinemas.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map((c) => (
+              <div 
+                key={c.id} 
+                onClick={() => setSelectedId(c.id)} 
+                className={`p-4 rounded-[1.5rem] border cursor-pointer transition-all flex items-center justify-between group ${
+                  selectedId === c.id ? 'bg-red-600 border-red-600 text-white shadow-lg' : 'bg-zinc-900/20 border-white/5 hover:border-white/10'
+                }`}
+              >
+                <div className="min-w-0">
+                  <h3 className="text-[11px] font-[1000] uppercase italic truncate">{c.name}</h3>
+                  <p className={`text-[8px] font-bold mt-0.5 truncate opacity-50`}>{c.address}</p>
                 </div>
-              ))}
-            </div>
-          </aside>
-
-          <main className="lg:col-span-8 space-y-6">
-            <div className="flex gap-3 overflow-x-auto no-scrollbar">
-                {dateTabs.map(d => (
-                  <button key={d.id} onClick={() => setSelectedDate(d.id)} className={`min-w-[80px] flex flex-col items-center p-4 rounded-2xl border transition-all ${selectedDate === d.id ? 'bg-white text-black' : 'bg-zinc-900/40 text-zinc-500'}`}>
-                    <div className="text-[9px] font-black uppercase mb-1.5">{d.dayName}</div>
-                    <span className="text-2xl font-black">{d.dateNum}</span>
-                  </button>
-                ))}
-            </div>
-
-            <section className="bg-zinc-900/20 border border-white/5 rounded-[2.5rem] p-8 min-h-[400px]">
-              <div className="space-y-6">
-                {fetchingShowtimes ? <Loader2 className="animate-spin text-red-600 mx-auto py-20" /> : movies.length > 0 ? (
-                  movies.map((m, idx) => (
-                    <MovieShowtimeItem 
-                      key={m.id || idx} 
-                      movie={m} 
-                      onSelect={(movieData: any, st: any, format: any) => setBooking({ 
-                        ...movieData, 
-                        id: st.id,      // ĐÂY LÀ SHOWTIME_ID THẬT
-                        time: st.time, 
-                        format, 
-                        roomId: st.roomId 
-                      })} 
-                    />
-                  ))
-                ) : ( <p className="text-center py-20 opacity-30 font-black uppercase text-[10px]">Không có suất chiếu</p> )}
+                <ChevronRight size={14} className={selectedId === c.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} />
               </div>
-            </section>
-          </main>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Content - Suất chiếu */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Lịch ngày ngang tinh giản */}
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            {dateTabs.map(d => (
+              <button 
+                key={d.id} 
+                onClick={() => setSelectedDate(d.id)} 
+                className={`min-w-[65px] py-3 flex flex-col items-center rounded-2xl border transition-all ${
+                  selectedDate === d.id ? 'bg-white text-black border-white' : 'bg-zinc-900/40 text-zinc-600 border-white/5'
+                }`}
+              >
+                <span className="text-[7px] font-black uppercase mb-1">{d.dayName}</span>
+                <span className="text-lg font-black italic">{d.dateNum}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Danh sách phim - Lưới 1 cột gọn gàng */}
+          <div className="bg-zinc-900/10 rounded-[2.5rem] border border-white/5 p-2 min-h-[400px]">
+            {fetchingShowtimes ? (
+              <div className="h-[400px] flex items-center justify-center"><Loader2 className="animate-spin text-red-600" /></div>
+            ) : movies.length > 0 ? (
+              <div className="grid grid-cols-1 gap-2">
+                {movies.map((m) => (
+                  <MovieShowtimeItem key={m.id} movie={m} onSelect={(movieData: any, st: any, format: any) => setBooking({ ...movieData, id: st.id, time: st.time, format, roomId: st.roomId })} />
+                ))}
+              </div>
+            ) : (
+              <div className="h-[400px] flex items-center justify-center opacity-10 font-black uppercase text-[10px] italic tracking-widest">Không có suất chiếu</div>
+            )}
+          </div>
         </div>
       </div>
+
       {booking && <BookingModal info={booking} onClose={() => setBooking(null)} />}
+      
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 }
