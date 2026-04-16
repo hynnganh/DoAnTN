@@ -48,14 +48,29 @@ export default function MovieDetailPage({ params }: { params: Promise<{ id: stri
   const displayRating = movie.rating ? movie.rating.toFixed(1) : "NEW";
   const displayDuration = movie.duration ? `${movie.duration} PHÚT` : "N/A";
   const displayGenre = movie.genre?.name || "HÀNH ĐỘNG";
+const getLocalImagePath = (fileName: string) => {
 
+    if (!fileName) return "https://placehold.co/400x600?text=No+Poster";
+
+    if (fileName.startsWith("http")) return fileName; 
+
+    
+
+    return `/images/${fileName}`; 
+
+  };
   return (
     <div className="min-h-screen bg-[#050505] text-zinc-300 font-sans selection:bg-red-600/30">
       
       {/* --- PHẦN ĐẦU TRANG (THU GỌN LẠI) --- */}
       <section className="relative h-[50vh] md:h-[55vh] w-full overflow-hidden">
         <div className="absolute inset-0">
-          <img src={displayPoster} className="w-full h-full object-cover opacity-10 blur-3xl scale-110" alt="bg" />
+        <img 
+            src={displayPoster} 
+            className="w-full h-full object-cover opacity-10 blur-3xl scale-110" 
+            alt="bg"
+            onError={(e) => e.currentTarget.src = "https://placehold.co/400x600?text=Error"} 
+          />          
           <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/80 to-transparent" />
         </div>
 

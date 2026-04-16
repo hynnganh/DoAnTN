@@ -2,6 +2,7 @@
 import React from 'react';
 import Link from "next/link";
 import { Ticket, Star, CalendarDays, Info } from "lucide-react";
+import { getImageUrl } from "@/app/lib/api"; // <-- THÊM DÒNG NÀY
 
 interface MovieCardProps {
   id: number;
@@ -15,15 +16,12 @@ export default function MovieCard({ id, title, image, rating, status }: MovieCar
   const isShowing = status === "SHOWING";
 
   // NGHIỆP VỤ RATING: 
-  // - Nếu có rating > 0: Hiển thị số (VD: 8.5)
-  // - Nếu không có hoặc bằng 0: Hiển thị "NEW"
   const hasRating = rating && Number(rating) > 0;
   const displayRating = hasRating ? Number(rating).toFixed(1) : "NEW";
 
   // NGHIỆP VỤ ẢNH LỖI:
-  // Hàm xử lý khi link ảnh từ Database bị 404 hoặc hỏng
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    e.currentTarget.src = "https://placehold.co/400x600?text=A%26K+Cinema";
+    e.currentTarget.src = "https://png.pngtree.com/png-clipart/20190611/original/pngtree-surprised-face-expression-png-image_2888052.jpg";
   };
 
   return (
@@ -32,10 +30,10 @@ export default function MovieCard({ id, title, image, rating, status }: MovieCar
       {/* 1. KHU VỰC POSTER (IMAGE CONTAINER) */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-900">
         <img
-          src={image || "https://placehold.co/400x600?text=Chưa+Có+Poster"}
+          src={getImageUrl(image)} // <-- SỬA DÒNG NÀY ĐỂ TÁI SỬ DỤNG LOGIC API
           alt={title}
           className={`w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 
-            ${!isShowing && 'grayscale-[0.3] group-hover:grayscale-0'}`} // Phim sắp chiếu để hơi mờ xám
+            ${!isShowing && 'grayscale-[0.3] group-hover:grayscale-0'}`} 
           onError={handleImageError}
           loading="lazy"
         />
@@ -52,14 +50,14 @@ export default function MovieCard({ id, title, image, rating, status }: MovieCar
           </span>
         </div>
 
-        {/* --- Badge Format (Top Right - Mặc định hiện IMAX cho phim đẹp) --- */}
+        {/* --- Badge Format (Top Right) --- */}
         {isShowing && (
           <div className="absolute top-4 right-4 bg-blue-600/50 backdrop-blur-md border border-blue-400/20 px-2 py-1 rounded-lg z-10">
             <span className="text-white text-[9px] font-black italic tracking-widest uppercase">IMAX</span>
           </div>
         )}
 
-        {/* --- Nút Action khi Hover (Chính giữa ảnh) --- */}
+        {/* --- Nút Action khi Hover --- */}
         <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-6 group-hover:translate-y-0 z-30 px-6 gap-3">
           <Link href={`/movies/${id}`} className="w-full">
             <button className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl transition-all active:scale-95
@@ -99,7 +97,6 @@ export default function MovieCard({ id, title, image, rating, status }: MovieCar
               {isShowing ? "Hành Động • Kinh Dị" : "Khởi chiếu: Sớm"}
             </span>
             
-            {/* Tag giới hạn độ tuổi */}
             <span className={`text-[10px] font-black border px-2 py-0.5 rounded italic 
               ${isShowing ? 'text-red-500 border-red-500/40' : 'text-blue-400 border-blue-400/40'}`}>
               {isShowing ? "T18" : "P"}
@@ -107,11 +104,9 @@ export default function MovieCard({ id, title, image, rating, status }: MovieCar
           </div>
         </div>
 
-        {/* Line hiệu ứng thẩm mỹ ở chân Card */}
         <div className={`h-[2px] w-0 transition-all duration-700 group-hover:w-full 
           ${isShowing ? 'bg-red-600' : 'bg-blue-600'}`} />
       </div>
-
     </div>
   );
 }

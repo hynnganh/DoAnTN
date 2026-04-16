@@ -2,14 +2,24 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, MapPin, Loader2, Clock, Ticket, ChevronRight, Star } from 'lucide-react';
 import BookingModal from './components/BookingModal';
-import { apiRequest } from '@/app/lib/api';
+// Fix 1: Import thêm getImageUrl
+import { apiRequest, getImageUrl } from '@/app/lib/api';
 
+// Fix 2: Component hiển thị ảnh sử dụng getImageUrl
 const MovieShowtimeItem = ({ movie, onSelect }: any) => (
   <div className="group flex gap-4 p-4 rounded-[2rem] bg-zinc-900/30 border border-white/5 hover:border-red-600/30 hover:bg-zinc-900/60 transition-all duration-300">
     {/* Poster Nhỏ Gọn */}
     <div className="relative shrink-0">
       <div className="w-24 h-36 rounded-2xl overflow-hidden shadow-xl">
-        <img src={movie.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={movie.title} />
+        <img 
+          src={getImageUrl(movie.image)} // <-- SỬA TẠI ĐÂY
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+          alt={movie.title} 
+          onError={(e) => {
+            // Dự phòng nếu ảnh lỗi
+            e.currentTarget.src = "https://placehold.co/400x600?text=Poster+Error";
+          }}
+        />
       </div>
       <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-lg bg-red-600 text-[8px] font-black text-white italic">
         {movie.tag}
@@ -91,7 +101,20 @@ export default function Cinema() {
           const grouped = filtered.reduce((acc: any, curr: any) => {
             const m = curr.movie;
             if (!m) return acc;
-            if (!acc[m.id]) acc[m.id] = { id: m.id, title: m.title, image: m.posterUrl, duration: m.duration, genre: m.genre?.name, tag: m.rating >= 18 ? "T18" : "T13", formats: {} };
+            
+            // Fix 3: Xử lý ảnh khi nhóm dữ liệu (Mặc dù src đã gọi getImageUrl, nhưng đảm bảo dữ liệu truyền vào sạch)
+            if (!acc[m.id]) {
+              acc[m.id] = { 
+                id: m.id, 
+                title: m.title, 
+                image: m.posterUrl, // Giữ nguyên tên trường là image để khớp với MovieShowtimeItem props
+                duration: m.duration, 
+                genre: m.genre?.name, 
+                tag: m.rating >= 18 ? "T18" : "T13", 
+                formats: {} 
+              };
+            }
+            
             const type = curr.room?.name?.includes("IMAX") ? "IMAX 3D" : "2D DIGITAL";
             if (!acc[m.id].formats[type]) acc[m.id].formats[type] = [];
             acc[m.id].formats[type].push({ id: curr.id, time: new Date(curr.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }), roomId: curr.room?.id });

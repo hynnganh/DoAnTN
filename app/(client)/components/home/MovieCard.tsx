@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Ticket, Star, CalendarDays } from "lucide-react";
+import { getImageUrl } from "@/app/lib/api";
 
 interface MovieCardProps {
   id: number;
@@ -12,28 +13,25 @@ interface MovieCardProps {
 
 export default function MovieCard({ id, title, image, rating, status }: MovieCardProps) {
   const isShowing = status === "SHOWING";
-const displayRating = rating || (Math.random() * (9.5 - 8.0) + 8.0).toFixed(1);
+  const displayRating = rating || (Math.random() * (9.5 - 8.0) + 8.0).toFixed(1);
 
   return (
     <div className="group relative bg-[#121212] rounded-2xl overflow-hidden shadow-2xl transition-all duration-500 hover:shadow-red-500/20 hover:-translate-y-2 border border-white/5">
       
       {/* Container Ảnh */}
       <div className="relative w-full h-[400px] overflow-hidden bg-zinc-900">
-        {image ? (
-          <img
-            src={image}
-            alt={title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-            // Thêm loading lazy để tối ưu tốc độ tải trang
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-zinc-700 text-[10px] uppercase font-bold tracking-tighter">
-            Chưa có Poster
-          </div>
-        )}
+        <img
+          src={getImageUrl(image)} 
+          alt={title}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          loading="lazy"
+          // Dự phòng trường hợp file ảnh bị lỗi trên server
+          onError={(e) => {
+            e.currentTarget.src = "https://img.lovepik.com/original_origin_pic/18/06/14/849853e3b96cc3cd7cd5c2c529a30d61.png_wh860.png";
+          }}
+        />
         
-        {/* Lớp phủ Gradient (Làm tối ảnh một chút để nổi bật nút) */}
+        {/* Lớp phủ Gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-transparent to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300" />
 
         {/* Badge Rating */}
@@ -72,7 +70,6 @@ const displayRating = rating || (Math.random() * (9.5 - 8.0) + 8.0).toFixed(1);
           <span className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">
             {isShowing ? "2D / 3D • Phụ Đề" : "Sắp khởi chiếu"}
           </span>
-          {/* Nhãn giới hạn độ tuổi - Có thể lấy từ DB nếu sau này thêm field ageRating */}
           <span className="text-red-500 text-[9px] font-black border border-red-500/50 px-1.5 py-0.5 rounded italic">
             T18
           </span>

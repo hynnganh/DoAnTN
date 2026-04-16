@@ -1,134 +1,169 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { TrendingUp, Activity, Globe, Zap, Users, Film, Ticket } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { 
+  BarChart3, Calendar, Download, Filter, 
+  ArrowUpRight, ArrowDownRight, TrendingUp,
+  CreditCard, Wallet, CalendarDays, Building2,
+  Trophy, Star, Activity
+} from "lucide-react";
 
-export default function SuperDashboard() {
-  const [stats, setStats] = useState({
-    totalRevenue: 0,
-    totalTickets: 0,
-    activeMovies: 0,
-    occupancyRate: 0,
-    totalUsers: 0
-  });
-  const [loading, setLoading] = useState(true);
+export default function StatisticsPage() {
+  const [dateRange, setDateRange] = useState("month");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const calculateDashboard = async () => {
-      const token = localStorage.getItem('token');
-      try {
-        // 1. Fetch dữ liệu thô từ các API bà đã có
-        const [resUsers, resCinemas, resTickets, resMovies] = await Promise.all([
-          fetch('http://localhost:8080/api/v1/users', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('http://localhost:8080/api/v1/cinemas', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('http://localhost:8080/api/v1/tickets', { headers: { 'Authorization': `Bearer ${token}` } }), // Giả định bà có API lấy list vé
-          fetch('http://localhost:8080/api/v1/movies', { headers: { 'Authorization': `Bearer ${token}` } })
-        ]);
+  // Dữ liệu giả lập doanh thu theo từng rạp
+  const cinemaRevenueData = [
+    { name: "A&K Thủ Đức", revenue: 125, grow: 12, color: "bg-red-600" },
+    { name: "A&K Quận 9", revenue: 98, grow: -5, color: "bg-orange-500" },
+    { name: "A&K Bình Thạnh", revenue: 156, grow: 20, color: "bg-emerald-500" },
+    { name: "A&K Gò Vấp", revenue: 74, grow: 8, color: "bg-blue-500" },
+    { name: "A&K Tân Bình", revenue: 112, grow: 15, color: "bg-purple-500" },
+  ];
 
-        const [users, cinemas, tickets, movies] = await Promise.all([
-          resUsers.json(), resCinemas.json(), resTickets.json(), resMovies.json()
-        ]);
-
-        // 2. CỘNG TRỪ NHÂN CHIA TẠI ĐÂY
-        
-        const totalRev = tickets.data.reduce((sum: number, t: any) => sum + t.price, 0);
-        
-        const totalTix = tickets.data.length;
-
-        const totalSeatsAvailable = 10000; 
-        const occRate = ((totalTix / totalSeatsAvailable) * 100).toFixed(1);
-
-        setStats({
-          totalRevenue: totalRev / 1000000000, 
-          totalTickets: totalTix,
-          activeMovies: movies.data.length,
-          occupancyRate: Number(occRate),
-          totalUsers: users.data.length
-        });
-
-      } catch (error) {
-        console.error("Lỗi tính toán dữ liệu:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    calculateDashboard();
-  }, []);
-
-  if (loading) return <div className="p-20 text-center animate-pulse text-zinc-500 uppercase font-black text-xs tracking-[0.5em]">Đang tính toán dữ liệu...</div>;
+  const handleFilterChange = (range: string) => {
+    setLoading(true);
+    setDateRange(range);
+    setTimeout(() => setLoading(false), 800);
+  };
 
   return (
-    <div className="space-y-10 pt-4 animate-in fade-in duration-1000 pb-20">
-      
-      {/* 1. Header */}
-      <div className="flex justify-between items-end">
+    <div className="min-h-screen bg-[#050505] text-zinc-100 p-6 md:p-10 font-sans">
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
         <div>
-          <h1 className="text-5xl font-[1000] italic tracking-tighter uppercase text-white leading-none">
-            Hệ thống <span className="text-red-600">Cinema</span>
+          <div className="flex items-center gap-2 text-red-600 font-black text-[8px] uppercase tracking-[0.4em] mb-2">
+            <Activity size={14} /> Analytics Dashboard
+          </div>
+          <h1 className="text-4xl font-[1000] uppercase tracking-tighter italic">
+            Doanh Thu <span className="text-zinc-600">Hệ Thống</span>
           </h1>
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-500 mt-4 italic">
-            Dữ liệu tổng hợp từ {stats.totalTickets} giao dịch
-          </p>
+        </div>
+
+        <div className="flex items-center gap-3 bg-zinc-900/50 p-1.5 rounded-2xl border border-white/5">
+          {['day', 'week', 'month', 'year'].map((item) => (
+            <button
+              key={item}
+              onClick={() => handleFilterChange(item)}
+              className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                dateRange === item 
+                ? "bg-red-600 text-white shadow-lg shadow-red-600/20" 
+                : "text-zinc-500 hover:text-white"
+              }`}
+            >
+              {item === 'day' ? 'Hôm nay' : item === 'week' ? 'Tuần' : item === 'month' ? 'Tháng' : 'Năm'}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* 2. Doanh thu chính (Dữ liệu đã qua tính toán) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 p-12 bg-zinc-950 border border-white/5 rounded-[4rem] relative overflow-hidden group shadow-2xl">
-          <div className="relative z-10 space-y-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-600/10 border border-red-600/20 rounded-full">
-              <Zap size={14} className="text-red-600 fill-red-600" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-red-600">Tổng doanh thu thực tế</span>
-            </div>
-            
-            <div className="space-y-2">
-              <h2 className="text-7xl font-[1000] italic tracking-tighter uppercase leading-none text-white">
-                {stats.totalRevenue.toFixed(2)} <span className="text-3xl text-zinc-600">Tỷ VNĐ</span>
-              </h2>
-              <div className="flex items-center gap-2 text-emerald-400 font-black italic text-lg">
-                <TrendingUp size={20} />
-                <span>Số liệu dựa trên tất cả cụm rạp</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+        {/* BIỂU ĐỒ SO SÁNH DOANH THU CÁC RẠP */}
+        <div className="lg:col-span-2 bg-zinc-900/30 border border-white/5 rounded-[40px] p-8 relative overflow-hidden group">
+          <div className="flex justify-between items-center mb-10">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-red-600 rounded-2xl shadow-lg shadow-red-600/20">
+                <BarChart3 size={20} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-widest">Hiệu năng rạp</h2>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">So sánh doanh thu (Triệu VNĐ)</p>
               </div>
             </div>
+            <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-bold uppercase transition-all">
+              <Download size={14} /> Tải báo cáo
+            </button>
+          </div>
 
-            <div className="grid grid-cols-3 gap-8 pt-6 border-t border-white/5">
-              <div>
-                <p className="text-[10px] font-black uppercase text-zinc-600 mb-1">Tổng vé bán</p>
-                <p className="text-2xl font-black italic text-white">{stats.totalTickets.toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-zinc-600 mb-1">Tỷ lệ lấp đầy</p>
-                <p className="text-2xl font-black italic text-white">{stats.occupancyRate}%</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-zinc-600 mb-1">Phim khả dụng</p>
-                <p className="text-2xl font-black italic text-white">{stats.activeMovies}</p>
-              </div>
-            </div>
+          <div className="h-[350px] w-full flex items-end gap-6 md:gap-12 px-4 relative">
+             {cinemaRevenueData.map((data, i) => (
+               <div key={i} className="flex-1 group/bar relative flex flex-col items-center">
+                  <div className="absolute -top-10 opacity-0 group-hover/bar:opacity-100 transition-all duration-300">
+                    <span className="bg-white text-black text-[10px] font-[1000] px-2 py-1 rounded-lg">
+                      {data.revenue}M
+                    </span>
+                  </div>
+                  
+                  <div 
+                    style={{ height: `${(data.revenue / 160) * 100}%` }} 
+                    className={`w-full max-w-[40px] ${data.color} rounded-t-2xl transition-all duration-1000 group-hover/bar:brightness-125 group-hover/bar:shadow-[0_0_30px_rgba(220,38,38,0.3)] relative`}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent rounded-t-2xl"></div>
+                  </div>
+                  
+                  <div className="mt-4 text-center">
+                    <p className="text-[9px] font-black uppercase text-zinc-500 group-hover/bar:text-white transition-colors rotate-45 md:rotate-0 origin-left">
+                      {data.name.replace("A&K ", "")}
+                    </p>
+                  </div>
+               </div>
+             ))}
           </div>
         </div>
 
-        {/* Cột trạng thái */}
-        <div className="bg-red-600 p-10 rounded-[4rem] flex flex-col justify-between shadow-xl relative overflow-hidden group">
-          <Activity size={32} strokeWidth={3} className="text-white mb-8" />
-          <div className="text-white space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Tổng người dùng</p>
-            <h3 className="text-5xl font-[1000] italic uppercase tracking-tighter">{stats.totalUsers.toLocaleString()}</h3>
-            <p className="text-[10px] font-bold bg-black/10 p-3 rounded-xl">Hệ thống đang phục vụ lượng lớn khách hàng trực tuyến.</p>
-          </div>
+        {/* TOP CINEMA RANKING */}
+        <div className="bg-zinc-900/30 border border-white/5 rounded-[40px] p-8 flex flex-col">
+           <h2 className="text-sm font-black uppercase tracking-widest mb-8 flex items-center gap-2">
+             <Trophy size={18} className="text-yellow-500" />
+             Bảng xếp hạng
+           </h2>
+           
+           <div className="space-y-5 flex-1">
+              {cinemaRevenueData.sort((a, b) => b.revenue - a.revenue).map((cinema, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.05] transition-all">
+                  <div className="flex items-center gap-4">
+                    <span className={`text-xl font-black italic ${index === 0 ? 'text-yellow-500' : 'text-zinc-700'}`}>
+                      0{index + 1}
+                    </span>
+                    <div>
+                      <p className="text-[10px] font-black uppercase">{cinema.name}</p>
+                      <p className={`text-[8px] font-bold uppercase ${cinema.grow > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {cinema.grow > 0 ? `+${cinema.grow}%` : `${cinema.grow}%`} so với kỳ trước
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black italic">{cinema.revenue}.0M</p>
+                  </div>
+                </div>
+              ))}
+           </div>
+
+           <div className="mt-8 p-6 bg-red-600/10 border border-red-600/20 rounded-3xl">
+              <div className="flex items-center gap-3 mb-2">
+                <Star size={14} className="text-red-600 fill-red-600" />
+                <p className="text-[10px] font-black text-red-600 uppercase">Insight</p>
+              </div>
+              <p className="text-[11px] leading-relaxed text-zinc-400 italic">
+                Rạp <span className="text-white font-bold">A&K Bình Thạnh</span> đang dẫn đầu doanh thu nhờ lượng khách xem phim "Lật Mặt 7" tăng đột biến.
+              </p>
+           </div>
         </div>
       </div>
 
-      {/* 3. Phân tích nhanh */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-white">
-         <div className="p-8 bg-zinc-900/40 border border-white/5 rounded-[2.5rem]">
-            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Trung bình giá vé</p>
-            <p className="text-2xl font-black italic mt-2">
-                {((stats.totalRevenue * 1000000000) / (stats.totalTickets || 1)).toLocaleString()} VNĐ
-            </p>
-         </div>
-         {/* Thêm các khối tính toán khác tương tự */}
+      {/* FOOTER STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+         <SmallStat label="Tổng doanh thu" value="565.0M" status="up" sub="Vượt chỉ tiêu 5%" />
+         <SmallStat label="Tổng đơn hàng" value="1.248" status="up" sub="Tăng 120 đơn" />
+         <SmallStat label="Tỷ lệ lấp đầy" value="68%" status="down" sub="Giảm nhẹ buổi sáng" />
+         <SmallStat label="Khách hàng mới" value="+452" status="up" sub="Chỉ số tăng trưởng tốt" />
       </div>
+    </div>
+  );
+}
+
+// --- Sub-components ---
+
+function SmallStat({ label, value, status, sub }: any) {
+  return (
+    <div className="bg-zinc-900/20 border border-white/5 p-6 rounded-[30px] hover:border-red-600/30 transition-all group">
+        <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 group-hover:text-red-600 transition-colors">{label}</p>
+        <div className="flex items-baseline gap-2 mb-2">
+           <h4 className="text-2xl font-black italic">{value}</h4>
+           <span className={`text-[9px] font-bold ${status === 'up' ? 'text-emerald-500' : 'text-red-500'}`}>
+             {status === 'up' ? '↑' : '↓'}
+           </span>
+        </div>
+        <p className="text-[9px] text-zinc-600 font-bold italic">{sub}</p>
     </div>
   );
 }

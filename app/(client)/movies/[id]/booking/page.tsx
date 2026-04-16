@@ -2,7 +2,8 @@
 import React, { useState, useEffect, use } from 'react';
 import { Calendar, MapPin, ChevronLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { apiRequest } from "../../../../lib/api"; 
+// Fix 1: Import thêm getImageUrl từ file api của bạn
+import { apiRequest, getImageUrl } from "../../../../lib/api"; 
 import BookingModal from '@/app/(client)/cinema/components/BookingModal'; 
 
 export default function MovieBookingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -15,7 +16,6 @@ export default function MovieBookingPage({ params }: { params: Promise<{ id: str
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [bookingInfo, setBookingInfo] = useState<any>(null);
 
-  // FIX 1: Tránh lỗi Hydration bằng cách set ngày trong useEffect
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
     setSelectedDate(today);
@@ -27,36 +27,35 @@ export default function MovieBookingPage({ params }: { params: Promise<{ id: str
   }, [selectedDate, movieId]);
 
   const fetchMovieDetail = async () => {
-  try {
-    const res = await apiRequest(`/api/v1/movies/${movieId}`);
-    const resData = await res.json();
-    if (res.ok) setMovie(resData.data);
-  } catch (error) {
-    console.error("Lỗi phim:", error);
-  }
-};
-
-const fetchShowtimes = async () => {
-  setLoading(true);
-  try {
-    const res = await apiRequest(`/api/v1/showtimes/movie/${movieId}?date=${selectedDate}`);
-
-    if (!res.ok) {
-      setShowtimes([]);
-      return;
+    try {
+      const res = await apiRequest(`/api/v1/movies/${movieId}`);
+      const resData = await res.json();
+      if (res.ok) setMovie(resData.data);
+    } catch (error) {
+      console.error("Lỗi phim:", error);
     }
+  };
 
-    const resData = await res.json();
-    setShowtimes(resData.data || []);
-  } catch (error) {
-    console.error("Lỗi suất chiếu:", error);
-    setShowtimes([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  const fetchShowtimes = async () => {
+    setLoading(true);
+    try {
+      const res = await apiRequest(`/api/v1/showtimes/movie/${movieId}?date=${selectedDate}`);
 
-  // FIX 3: Grouping an toàn hơn, tránh crash khi dữ liệu null
+      if (!res.ok) {
+        setShowtimes([]);
+        return;
+      }
+
+      const resData = await res.json();
+      setShowtimes(resData.data || []);
+    } catch (error) {
+      console.error("Lỗi suất chiếu:", error);
+      setShowtimes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const groupedShowtimes = showtimes.reduce((acc: any, st: any) => {
     const cinemaName = st.cinemaItem?.name || st.room?.cinemaItem?.name || "Rạp A&K Cinema"; 
     if (!acc[cinemaName]) acc[cinemaName] = [];
@@ -81,10 +80,12 @@ const fetchShowtimes = async () => {
 
   const formatTime = (dateTimeStr: string) => {
     if (!dateTimeStr) return "00:00";
-    // Tách lấy phần HH:mm từ chuỗi YYYY-MM-DDTHH:mm:ss
     const parts = dateTimeStr.split('T');
     return parts[1] ? parts[1].substring(0, 5) : "00:00";
   };
+
+  // Fix 2: Xử lý đường dẫn ảnh tập trung để dùng ở nhiều nơi
+  const moviePosterUrl = movie?.posterUrl ? getImageUrl(movie.posterUrl) : null;
 
   return (
     <div className="min-h-screen bg-[#050505] text-white pt-10 pb-20 px-6 font-sans">
@@ -139,7 +140,7 @@ const fetchShowtimes = async () => {
                             showtimeId: st.id,
                             roomId: st.room?.id,
                             title: movie?.title,
-                            image: movie?.posterUrl,
+                            image: moviePosterUrl, // Fix 3: Truyền ảnh đã xử lý vào modal
                             time: formatTime(st.startTime),
                             cinema: cinemaName,
                             date: selectedDate
@@ -165,7 +166,21 @@ const fetchShowtimes = async () => {
           <aside className="hidden lg:block">
             <div className="sticky top-32 bg-zinc-900/20 border border-white/5 rounded-[3rem] p-10 space-y-8 text-center">
               <div className="aspect-[2/3] rounded-[2rem] overflow-hidden border border-white/10">
-                {movie?.posterUrl && <img src={movie.posterUrl} className="w-full h-full object-cover" alt="poster" />}
+                {/* Fix 4: Sử dụng moviePosterUrl đã xử lý và thêm onError dự phòng */}
+                {moviePosterUrl ? (
+                  <img 
+                    src={moviePosterUrl} 
+                    className="w-full h-full object-cover" 
+                    alt="poster" 
+                    onError={(e) => {
+                      e.currentTarget.src = "https://placehold.co/400x600?text=No+Poster";
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-zinc-800 text-zinc-500 text-xs font-bold uppercase tracking-widest">
+                    No Poster
+                  </div>
+                )}
               </div>
               <h5 className="text-xl font-black uppercase italic tracking-tighter leading-tight">{movie?.title}</h5>
             </div>

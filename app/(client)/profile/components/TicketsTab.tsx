@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle2, Ticket as TicketIcon, Loader2, Calendar } from 'lucide-react';
-import { apiRequest } from '@/app/lib/api'; 
+import { apiRequest, getImageUrl } from '@/app/lib/api'; 
 import Cookies from 'js-cookie';
 
 interface Ticket {
@@ -25,7 +25,6 @@ export default function TicketsTab() {
         const res = await apiRequest('/api/v1/tickets/my-history');
         if (res.ok) {
           const result = await res.json();
-          // Lấy toàn bộ mảng data, không dùng slice
           setTickets(result.data || []);
         }
       } catch (err) { console.error(err); } 
@@ -34,20 +33,17 @@ export default function TicketsTab() {
     fetchHistory();
   }, []);
 
-  // --- SỬA LOGIC LỌC TẠI ĐÂY ---
   const filtered = tickets.filter(t => {
     const showDate = new Date(t.showtime.startTime);
     const now = new Date();
 
     if (activeFilter === 'upcoming') {
-      // Sắp đi: Vé chưa chiếu xong VÀ (đã thanh toán hoặc đang chờ)
       return showDate >= now && (t.status === 'PAID' || t.status === 'PENDING' || t.status === 'BOOKED');
     }
     if (activeFilter === 'done') {
-      // Đã đi: Dựa vào thời gian suất chiếu đã qua
       return showDate < now;
     }
-    return true; // 'all'
+    return true; 
   });
 
   if (loading) return (
@@ -76,15 +72,23 @@ export default function TicketsTab() {
         </div>
       </div>
 
-      {/* --- THÊM SCROLL TẠI ĐÂY --- */}
+      {/* Ticket List */}
       <div className="grid gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
         {filtered.map((ticket) => (
           <div 
             key={ticket.id} 
             className="group flex items-center gap-4 p-3 bg-zinc-900/40 rounded-2xl border border-white/5 hover:border-red-600/20 transition-all hover:bg-zinc-900/60"
           >
+            {/* PHẦN FIX ẢNH THEO ĐƯỜNG DẪN FILE */}
             <div className="relative w-12 h-16 rounded-xl overflow-hidden shrink-0 shadow-2xl">
-              <img src={ticket.showtime.movie.posterUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt="" />
+              <img 
+                src={getImageUrl(ticket.showtime.movie.posterUrl)} 
+                className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" 
+                alt={ticket.showtime.movie.title} 
+                onError={(e) => {
+                  e.currentTarget.src = "https://placehold.co/400x600?text=No+Image";
+                }}
+              />
             </div>
 
             <div className="flex-1 min-w-0">
