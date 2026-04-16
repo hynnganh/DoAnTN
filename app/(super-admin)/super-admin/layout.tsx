@@ -31,14 +31,6 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           const data = await adminRes.json();
           setAdminInfo(data.data);
         }
-
-        const statsRes = await fetch('http://localhost:8080/api/v1/cinemas/stats', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          setCinemaStats(statsData.data); 
-        }
       } catch (error) {
         console.error("Lỗi fetch dữ liệu hệ thống:", error);
       }

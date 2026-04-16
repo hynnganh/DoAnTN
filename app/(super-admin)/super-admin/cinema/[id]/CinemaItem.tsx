@@ -9,7 +9,7 @@ interface AddModalProps {
   onClose: () => void;
   cinemaId: number;
   onSuccess: () => void;
-  initialData?: any; // Thêm prop này để nhận dữ liệu khi sửa
+  initialData?: any;
 }
 
 export default function AddCinemaItemModal({ isOpen, onClose, cinemaId, onSuccess, initialData }: AddModalProps) {
@@ -22,7 +22,6 @@ export default function AddCinemaItemModal({ isOpen, onClose, cinemaId, onSucces
     cinemaId: cinemaId
   });
 
-  // Khi mở Modal, nếu có initialData thì fill vào form, không thì reset trắng
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -39,14 +38,13 @@ export default function AddCinemaItemModal({ isOpen, onClose, cinemaId, onSucces
 
   if (!isOpen) return null;
 
-  const isEdit = !!initialData; // Kiểm tra xem là đang sửa hay thêm
+  const isEdit = !!initialData; 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setIsSubmitting(true);
       
-      // Nếu sửa thì dùng PUT + ID, nếu thêm thì dùng POST
       const url = isEdit 
         ? `/api/v1/cinema-items/${initialData.id}` 
         : `/api/v1/cinema-items`;
@@ -92,7 +90,7 @@ export default function AddCinemaItemModal({ isOpen, onClose, cinemaId, onSucces
             <label className="text-[9px] font-black uppercase text-zinc-700 tracking-widest ml-1 italic">Tên phòng (Name)</label>
             <input 
               className="w-full bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:border-red-600 outline-none transition-all placeholder:text-zinc-700"
-              placeholder="VD: Phòng chiếu 01"
+              placeholder="VD: Rạp A&K - Tên đường"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
               required
