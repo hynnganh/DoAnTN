@@ -1,6 +1,10 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Filter, Trash2, Edit3, MapPin, Film, Sparkles, MoreHorizontal, LayoutGrid, List, Loader2 } from 'lucide-react';
+import { 
+  Plus, Search, Filter, Trash2, Edit3, MapPin, Film, 
+  Sparkles, Loader2, Calendar, MoreHorizontal, ExternalLink,
+  AlertCircle, ChevronRight, X
+} from 'lucide-react';
 import { apiRequest } from '@/app/lib/api';
 import toast, { Toaster } from 'react-hot-toast';
 import PromotionModal from './EventModal';
@@ -9,118 +13,190 @@ export default function AdminPromotionManager() {
   const [promotions, setPromotions] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  
+  // States cho Modal Thêm/Sửa
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('view');
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedPromo, setSelectedPromo] = useState<any>(null);
+
+  // States cho xác nhận xóa
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [promoToDelete, setPromoToDelete] = useState<number | null>(null);
 
   const fetchPromotions = useCallback(async () => {
     setLoading(true);
     try {
       const res = await apiRequest('/api/v1/promotions');
       const json = await res.json();
-      const data = json.data || [];
+      const data = json.data?.content || json.data || [];
       setPromotions(Array.isArray(data) ? data : []);
     } catch (e) {
       toast.error("Lỗi đồng bộ dữ liệu");
-      setPromotions([]);
     } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchPromotions(); }, [fetchPromotions]);
 
-  // Nghiệp vụ: Lọc dữ liệu tại chỗ
+  const handleDeleteClick = (id: number) => {
+    setPromoToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (!promoToDelete) return;
+    try {
+      const res = await apiRequest(`/api/v1/promotions/${promoToDelete}`, { method: 'DELETE' } as any);
+      if (res.ok) {
+        toast.success("Đã gỡ bỏ sự kiện thành công");
+        fetchPromotions();
+      }
+    } catch (e) { toast.error("Lỗi kết nối"); }
+    finally { 
+      setIsDeleteModalOpen(false); 
+      setPromoToDelete(null);
+    }
+  };
+
   const filteredPromotions = promotions.filter(p => 
-    p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.cinemaItem?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-zinc-100 p-4 md:p-8 font-sans">
+    <div className="min-h-screen bg-[#050505] text-zinc-100 font-sans">
       <Toaster position="top-right" />
+      
+      {/* Modal chính (Thêm/Sửa) */}
       <PromotionModal 
         isOpen={isModalOpen} mode={modalMode} data={selectedPromo}
         onClose={() => setIsModalOpen(false)} onRefresh={fetchPromotions} 
       />
 
-      <div className="max-w-7xl mx-auto space-y-8">
+      {/* Custom Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+          <div className="bg-zinc-950 border border-white/10 p-8 rounded-[2.5rem] max-w-sm w-full shadow-2xl space-y-6 text-center">
+            <div className="mx-auto w-16 h-16 bg-red-600/10 rounded-2xl flex items-center justify-center text-red-500 mb-2">
+              <Trash2 size={32} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black uppercase italic tracking-tight">Xóa chiến dịch?</h3>
+              <p className="text-zinc-500 text-sm mt-2">Dữ liệu này sẽ biến mất vĩnh viễn khỏi hệ thống.</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-4 bg-zinc-900 hover:bg-zinc-800 rounded-xl font-bold transition-all">Hủy</button>
+              <button onClick={executeDelete} className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-red-600/20">Xác nhận</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col h-screen">
         {/* Top Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-zinc-900/40 p-6 rounded-[2rem] border border-white/5 shadow-2xl">
-          <div>
-            <h1 className="text-2xl font-black uppercase italic tracking-tighter flex items-center gap-2">
-              <Sparkles className="text-red-600" size={24} /> Promotion Center
-            </h1>
-            <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1 tracking-widest">Quản lý chiến dịch & Marketing</p>
+        <header className="p-6 md:px-10 flex flex-col md:flex-row justify-between items-center gap-4 border-b border-white/5 bg-zinc-950/50 backdrop-blur-xl sticky top-0 z-50">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-red-600 rounded-2xl">
+              <Sparkles className="text-white" size={24} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black uppercase italic tracking-tighter">Campaign <span className="text-red-600">Pro</span></h1>
+              <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest leading-none mt-1">Quản lý khuyến mãi hệ thống</p>
+            </div>
           </div>
-          <button 
-            onClick={() => { setModalMode('create'); setSelectedPromo(null); setIsModalOpen(true); }}
-            className="w-full md:w-auto px-6 py-3 bg-red-600 hover:bg-white hover:text-red-600 text-white font-black uppercase text-[10px] rounded-xl transition-all shadow-lg shadow-red-600/20 active:scale-95"
-          >
-            + Khởi tạo chiến dịch
-          </button>
-        </div>
 
-        {/* Search & Filter Bar */}
-        <div className="flex flex-col md:flex-row gap-4 items-center">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm sự kiện, tên rạp..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-zinc-900/50 border border-white/5 pl-12 pr-4 py-3 rounded-xl outline-none focus:border-red-600/50 transition-all text-sm"
-            />
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="relative flex-1 md:w-80">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} />
+              <input 
+                value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Tìm kiếm nhanh..." 
+                className="w-full bg-zinc-900/50 border border-white/5 pl-12 pr-4 py-3 rounded-xl text-xs focus:border-red-600 outline-none transition-all"
+              />
+            </div>
+            <button 
+              onClick={() => { setModalMode('create'); setSelectedPromo(null); setIsModalOpen(true); }}
+              className="bg-white text-black p-3 md:px-6 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap"
+            >
+              <Plus size={16} /> <span className="hidden md:block">Tạo mới</span>
+            </button>
           </div>
-          <div className="flex gap-2 w-full md:w-auto">
-            <button className="p-3 bg-zinc-900/50 border border-white/5 rounded-xl text-zinc-400 hover:text-white"><Filter size={18}/></button>
-            <button className="p-3 bg-zinc-900/50 border border-white/5 rounded-xl text-zinc-400 hover:text-white"><LayoutGrid size={18}/></button>
-          </div>
-        </div>
+        </header>
 
-        {/* Content Area */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-40 gap-4">
-            <Loader2 className="animate-spin text-red-600 w-10 h-10" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Đang tải dữ liệu...</span>
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-hidden flex flex-col p-6 md:p-10 space-y-6">
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-zinc-500">
+              <Filter size={14} />
+              <span className="text-[10px] font-black uppercase tracking-widest">Danh sách hiện hành ({filteredPromotions.length})</span>
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPromotions.map((p) => (
-              <div key={p.id} className="group relative bg-zinc-900/20 border border-white/5 rounded-[2rem] overflow-hidden hover:border-red-600/30 transition-all duration-500 shadow-xl">
-                {/* Image & Overlay */}
-                <div className="relative aspect-video bg-zinc-800">
-                  <img src={p.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0c] via-transparent to-transparent opacity-90" />
-                  
-                  <div className="absolute top-4 right-4 flex gap-1">
-                    <button onClick={() => { setSelectedPromo(p); setModalMode('edit'); setIsModalOpen(true); }} className="p-2 bg-black/60 backdrop-blur-md rounded-lg hover:bg-white hover:text-black transition-all"><Edit3 size={14}/></button>
-                  </div>
-                </div>
 
-                {/* Info */}
-                <div className="p-6 pt-2 relative">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="px-2 py-0.5 bg-red-600/10 text-red-500 text-[8px] font-black uppercase border border-red-600/20 rounded-md">Hot Deal</span>
-                    <span className="text-[10px] font-black text-zinc-600 italic">#{p.id}</span>
-                  </div>
-                  
-                  <h3 className="text-lg font-bold uppercase italic tracking-tight line-clamp-1 group-hover:text-red-600 transition-colors">{p.title}</h3>
-                  
-                  <div className="mt-4 space-y-3 border-t border-white/5 pt-4">
-                    <div className="flex items-center gap-3 text-zinc-400">
-                      <div className="p-1.5 bg-zinc-800 rounded-md"><MapPin size={12}/></div>
-                      <span className="text-[10px] font-bold uppercase tracking-tight">{p.cinemaItem?.name || "Hệ thống"}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-zinc-400">
-                      <div className="p-1.5 bg-zinc-800 rounded-md"><Film size={12}/></div>
-                      <span className="text-[10px] font-bold uppercase tracking-tight line-clamp-1">{p.movie?.title || "Áp dụng tất cả phim"}</span>
-                    </div>
-                  </div>
-                </div>
+          {loading ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-4">
+              <Loader2 className="animate-spin text-red-600" size={40} />
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600">Đang tải dữ liệu...</span>
+            </div>
+          ) : (
+            <div className="flex-1 bg-zinc-900/20 border border-white/5 rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl">
+              {/* Table Header */}
+              <div className="grid grid-cols-12 p-6 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                <div className="col-span-5 md:col-span-6">Thông tin chiến dịch</div>
+                <div className="col-span-3 hidden md:block text-center">Áp dụng cho</div>
+                <div className="col-span-4 md:col-span-3 text-right">Hành động</div>
               </div>
-            ))}
-          </div>
-        )}
+
+              {/* Table Body */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {filteredPromotions.length > 0 ? filteredPromotions.map((p) => (
+                  <div key={p.id} className="grid grid-cols-12 items-center p-6 border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors group">
+                    {/* Info */}
+                    <div className="col-span-5 md:col-span-6 flex items-center gap-4">
+                      <div className="w-16 h-10 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0 border border-white/5">
+                        <img src={p.thumbnail} className="w-full h-full object-cover" alt="" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold truncate group-hover:text-red-500 transition-colors italic">{p.title}</h4>
+                        <p className="text-[10px] text-zinc-500 mt-1 uppercase font-bold tracking-tighter">ID: #{p.id}</p>
+                      </div>
+                    </div>
+
+                    {/* Meta */}
+                    <div className="col-span-3 hidden md:flex flex-col gap-1 items-center justify-center">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400">
+                         <MapPin size={10} className="text-red-500" /> {p.cinemaItem?.name || "Toàn hệ thống"}
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400">
+                         <Film size={10} className="text-red-500" /> {p.movie?.title || "Tất cả phim"}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="col-span-7 md:col-span-3 flex justify-end gap-2">
+                      <button 
+                        onClick={() => { setSelectedPromo(p); setModalMode('edit'); setIsModalOpen(true); }}
+                        className="p-3 bg-zinc-800 hover:bg-white hover:text-black rounded-xl transition-all"
+                      >
+                        <Edit3 size={16} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteClick(p.id)}
+                        className="p-3 bg-zinc-800 hover:bg-red-600 hover:text-white rounded-xl transition-all"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="h-full flex flex-col items-center justify-center text-zinc-700 opacity-50">
+                    <AlertCircle size={40} className="mb-2" />
+                    <p className="text-xs font-black uppercase tracking-widest">Không có dữ liệu</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );
