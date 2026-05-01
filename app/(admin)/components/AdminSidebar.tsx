@@ -24,7 +24,6 @@ export default function AdminSidebar() {
     { name: 'Phòng chiếu', icon: Monitor, href: '/admin/rooms' }, 
     { name: 'Lịch chiếu', icon: Calendar, href: '/admin/showtimes' },
     { name: 'Quản lý Vé', icon: Ticket, href: '/admin/tickets' }, 
-    { name: 'Bắp nước & Combo', icon: Box, href: '/admin/food-combos' },
     { name: 'Khách hàng', icon: Users, href: '/admin/users' },
   ];
 

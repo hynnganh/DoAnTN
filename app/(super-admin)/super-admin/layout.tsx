@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Film, Users, MapPin, 
   LogOut, Search, Menu, Zap, Calendar, 
-  BarChart3, Fingerprint, MessageSquare, Ticket, Tag 
+  BarChart3, Fingerprint, MessageSquare, Ticket, Tag, 
+  Box
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import Cookies from 'js-cookie';
@@ -58,6 +59,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     { label: "Quản lý đơn hàng", icon: <MessageSquare size={20} />, href: "/super-admin/order" },
     { label: "Người dùng", icon: <Users size={20} />, href: "/super-admin/user" },
     { label: "Giá vé & Ghế", icon: <Ticket size={20} />, href: "/super-admin/seat-price" },
+    { label: "Combo", icon: <Box size={20} />, href: "/super-admin/food-combos" },
     { label: "Thống kê", icon: <BarChart3 size={20} />, href: "/super-admin/analytic" },
   ];
 
