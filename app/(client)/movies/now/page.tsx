@@ -10,15 +10,23 @@ export default function PhimDangChieu() {
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-        // Lấy danh sách phim đang chiếu (SHOWING)
+        // Lấy danh sách phim đang chiếu (SHOWING) từ Backend Spring Boot
         const response = await apiRequest("/api/v1/movies?status=SHOWING", { 
           method: "GET" 
         });
         
         if (response.ok) {
           const resData = await response.json();
-          // Backend trả về cấu trúc Page của Spring Boot (resData.data.content)
-          setMovies(resData.data.content || []);
+          
+          // BỘ LỌC DỮ LIỆU ĐỘNG THẦN TỐC: Bắt mọi kiểu cấu trúc JSON đầu ra của Spring Boot
+          const targetData = resData.data;
+          if (targetData) {
+            // Nếu có trường data bọc ngoài (ApiResponse chuẩn)
+            setMovies(targetData.content || (Array.isArray(targetData) ? targetData : []));
+          } else {
+            // Nếu data trả về trực tiếp không qua lớp bọc ApiResponse
+            setMovies(Array.isArray(resData) ? resData : (resData.content || []));
+          }
         }
       } catch (error) {
         console.error("Lỗi khi tải danh sách phim:", error);
@@ -32,12 +40,12 @@ export default function PhimDangChieu() {
 
   return (
     <div className="bg-[#050505] min-h-screen pt-5 pb-20 px-6 md:px-16 text-white font-sans">
-      {/* Inject CSS Animation đồng bộ với MovieCard */}
-      <style>{`
+      
+      {/* FIX CONSOLE WARNING: Nhúng CSS Animation đồng bộ theo chuẩn dangerouslySetInnerHTML của React */}
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes shimmer { 0% { transform: translateX(-150%) skewX(-12deg); } 100% { transform: translateX(150%) skewX(-12deg); } }
         .animate-shimmer { animation: shimmer 2.5s infinite; }
-        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-      `}</style>
+      `}} />
 
       {/* --- HEADER --- */}
       <div className="max-w-[1440px] mx-auto mb-5 flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-12">
@@ -79,9 +87,8 @@ export default function PhimDangChieu() {
                 key={movie.id} 
                 id={movie.id}
                 title={movie.title}
-                // Đồng bộ tên field image với posterUrl từ Backend
-                image={movie.posterUrl} 
-                rating={movie.rating}
+                image={movie.posterUrl} // Đồng bộ chính xác thuộc tính posterUrl từ bảng Movie
+                rating={movie.rating}   // Nhả điểm số thật (Double) từ DB để MovieCard bóc tách
                 status={movie.status}
               />
             ))

@@ -1,12 +1,13 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
-import { apiRequest } from '@/app/lib/api'; 
+import { apiRequest, getImageUrl } from '@/app/lib/api'; 
+import { getTokenByRole } from '@/app/lib/auth'; // Import hàm lấy token chuẩn theo phân vai
 import toast, { Toaster } from 'react-hot-toast';
 import { 
-  Loader2, ChevronLeft, TicketPercent, CreditCard, 
-  Wallet, User, Calendar, Clock, Monitor, ShieldCheck, CheckCircle2
+  Loader2, ChevronLeft, TicketPercent, Tag, Info, 
+  CreditCard, Wallet, User, MapPin, Calendar, 
+  Clock, Monitor, ShieldCheck, CheckCircle2
 } from 'lucide-react';
 
 export default function PaymentPage() {
@@ -31,9 +32,12 @@ export default function PaymentPage() {
       const parsedData = JSON.parse(sData);
       setBookingData(parsedData);
 
-      const token = Cookies.get("token") || localStorage.getItem("token");
+      // CẬP NHẬT: Lấy token tự động thông qua cơ chế fallback của hàm getTokenByRole()
+      const token = getTokenByRole();
+      
       try {
-        if (token) {
+        // Kiểm tra điều kiện token hợp lệ, tránh bẫy chuỗi "undefined" hoặc "null"
+        if (token && token !== "undefined" && token !== "null") {
           const [userRes, vRes] = await Promise.all([
             apiRequest('/api/v1/users/me'),
             apiRequest('/api/v1/vouchers/my-vouchers')
@@ -58,10 +62,12 @@ export default function PaymentPage() {
     initPage();
   }, [router]);
 
+  // TỔNG HỢP TẤT CẢ LOGIC TÍNH TOÁN
   const calculateTotals = () => {
     const seatPrice = Number(bookingData?.seatPrice) || 0;
     const comboPrice = Number(bookingData?.comboPrice) || 0;
     const subTotal = seatPrice + comboPrice;
+    
     const discount = selectedVoucher ? Number(selectedVoucher.discountValue) : 0;
     const finalTotal = Math.round(Math.max(0, subTotal - discount));
     
@@ -70,13 +76,16 @@ export default function PaymentPage() {
 
   const { subTotal, discount, finalTotal } = calculateTotals();
 
+  // BỘ LỌC VOUCHER THEO JSON API
   const validVouchers = vouchers.filter(v => {
     const now = new Date();
     const start = new Date(v.startDate);
     const end = new Date(v.endDate);
+    
     const isMinAmountMet = subTotal >= (v.minOrderAmount || 0);
     const isWithinTime = now >= start && now <= end;
     const hasUsageLeft = (v.usageLimit || 0) > (v.usedCount || 0);
+
     return isMinAmountMet && isWithinTime && hasUsageLeft;
   });
 
@@ -85,9 +94,10 @@ export default function PaymentPage() {
     setIsProcessing(true);
     
     try {
-      const token = Cookies.get("token") || localStorage.getItem("token");
-      if (!token) {
-        toast.error("Vui lòng đăng nhập!");
+      // CẬP NHẬT: Kiểm tra token nghiêm ngặt bằng cơ chế mới chống lỗi 403 Forbidden
+      const token = getTokenByRole();
+      if (!token || token === "undefined" || token === "null") {
+        toast.error("Vui lòng đăng nhập lại hệ thống!");
         return;
       }
       
@@ -103,12 +113,9 @@ export default function PaymentPage() {
         voucherCode: selectedVoucher?.code || "" 
       };
 
+      // CẬP NHẬT: Loại bỏ headers thủ công vì apiRequest mới đã tự động tiêm Token & Content-Type
       const res = await apiRequest(`/api/v1/orders`, {
         method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(payload)
       });
       
@@ -128,7 +135,8 @@ export default function PaymentPage() {
           }, 2000);
         }
       } else {
-        toast.error(resData.message || "Lỗi đặt vé!");
+        const errorMessage = resData.message || resData.error || "Lỗi đặt vé!";
+        toast.error(errorMessage);
       }
     } catch (err) { 
       toast.error("Lỗi kết nối!"); 
@@ -148,15 +156,20 @@ export default function PaymentPage() {
       <Toaster position="top-center" reverseOrder={false} />
       
       <div className="max-w-6xl mx-auto relative z-10">
+        {/* Nút quay lại */}
         <button onClick={() => router.back()} className="flex items-center gap-2 text-zinc-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-8">
           <ChevronLeft size={14}/> Quay lại chọn ghế
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* CỘT TRÁI: THÔNG TIN VÉ & VOUCHER */}
           <div className="lg:col-span-8 space-y-6">
+            
+            {/* Thẻ phim chính */}
             <div className="bg-zinc-900/20 border border-white/5 rounded-[3rem] p-6 md:p-10 flex flex-col md:flex-row gap-8 items-center">
               <div className="w-32 h-44 rounded-2xl overflow-hidden shadow-2xl border border-white/10 shrink-0">
-                <img src={bookingData.movieImage} alt="Poster" className="w-full h-full object-cover" />
+                {/* CẬP NHẬT: Bọc qua hàm getImageUrl chuẩn hóa link ảnh từ Cloudinary/Local */}
+                <img src={getImageUrl(bookingData.movieImage)} alt="Poster" className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 text-center md:text-left">
                 <h1 className="text-4xl font-[1000] italic uppercase tracking-tighter mb-4 leading-none">
@@ -170,6 +183,7 @@ export default function PaymentPage() {
               </div>
             </div>
 
+            {/* Thông tin rạp & Khách hàng */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-zinc-900/20 border border-white/5 p-6 rounded-[2rem]">
                 <p className="text-[9px] font-black text-red-600 uppercase mb-2">Vị trí ghế</p>
@@ -187,6 +201,7 @@ export default function PaymentPage() {
               </div>
             </div>
 
+            {/* PHẦN VOUCHER */}
             <div className="bg-zinc-900/20 border border-white/5 p-8 rounded-[2.5rem] space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black uppercase italic text-red-600 flex items-center gap-2"><TicketPercent size={14}/> Ưu đãi dành cho bạn</h3>
@@ -228,6 +243,7 @@ export default function PaymentPage() {
             </div>
           </div>
 
+          {/* CỘT PHẢI: HÓA ĐƠN & THANH TOÁN */}
           <div className="lg:col-span-4">
             <div className="bg-zinc-950 border border-white/10 rounded-[3rem] p-8 sticky top-10 space-y-8">
               <h2 className="text-2xl font-[1000] italic uppercase tracking-tighter border-b border-white/5 pb-4">Tóm tắt đơn</h2>
@@ -274,11 +290,16 @@ export default function PaymentPage() {
               >
                 {isProcessing ? <Loader2 className="animate-spin" /> : <><ShieldCheck size={20}/> Xác nhận ngay</>}
               </button>
+              
+              <p className="text-[8px] text-center text-zinc-600 font-bold uppercase tracking-tighter">
+                Bằng việc xác nhận, bạn đồng ý với các điều khoản của A&K Cinema
+              </p>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Hiệu ứng nền Blur */}
       <div className="fixed inset-0 pointer-events-none opacity-20 overflow-hidden">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-red-600/20 blur-[150px] rounded-full" />
         <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-red-900/10 blur-[100px] rounded-full" />

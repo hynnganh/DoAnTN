@@ -12,17 +12,24 @@ export default function MovieSection() {
   useEffect(() => {
     const fetchShowingMovies = async () => {
       try {
-        // FIX 1: Đổi size=8 thành size=4 để chỉ hiện đúng 1 hàng trên Desktop
+        // Chỉ lấy đúng 4 phim đang chiếu (tương đương 1 hàng trên màn hình lớn)
         const response = await apiRequest("/api/v1/movies?status=SHOWING&page=0&size=4", { 
           method: "GET" 
         });
         
         if (response.ok) {
           const resData = await response.json();
-          setMovies(resData.data.content || []);
+          
+          // BỘ LỌC DỮ LIỆU ĐỘNG: Bắt mọi kiểu cấu trúc JSON đầu ra của Spring Boot tránh lỗi crash trang chủ
+          const targetData = resData.data;
+          if (targetData) {
+            setMovies(targetData.content || (Array.isArray(targetData) ? targetData : []));
+          } else {
+            setMovies(Array.isArray(resData) ? resData : (resData.content || []));
+          }
         }
       } catch (error) {
-        console.error("Lỗi:", error);
+        console.error("Lỗi tải phim đang chiếu trang chủ:", error);
       } finally {
         setLoading(false);
       }
@@ -58,7 +65,6 @@ export default function MovieSection() {
           </div>
         </div>
         
-        {/* FIX 2: Đổi link dẫn đến trang Phim Đang Chiếu của bạn */}
         <Link href="/movies/now" className="hidden sm:block">
           <button className="group flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-300 font-bold text-xs uppercase tracking-widest">
             Xem tất cả 
@@ -75,7 +81,8 @@ export default function MovieSection() {
             title={movie.title}
             image={movie.posterUrl} 
             status={movie.status}
-            // Nếu bạn muốn hiển thị rating thật từ API, hãy thêm prop rating={movie.rating} ở đây
+            // FIX ĐẮT GIÁ: Nhả trực tiếp dữ liệu rating thật từ API xuống MovieCard
+            rating={movie.rating} 
           />
         ))}
       </div>

@@ -3,12 +3,18 @@ import React, { useState, useEffect, use } from 'react';
 import { Play, Star, Award, Calendar, Globe, Film, Ticket, Loader2, X, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiRequest } from "@/app/lib/api";
+import { apiRequest, getImageUrl } from "@/app/lib/api"; 
 import toast, { Toaster } from 'react-hot-toast';
 import ReviewModal from '../ReviewModal';
 import ReviewList from '../ReviewList';
 
-// --- COMPONENT: DANH SÁCH PHIM GỢI Ý (Giữ nguyên) ---
+// --- HÀM TRỢ GIÚP CHUẨN HÓA ĐƯỜNG DẪN ẢNH ---
+const resolveMovieImg = (url: string) => {
+  if (!url) return "https://placehold.co/400x600?text=No+Poster";
+  return url.startsWith('http') ? url : getImageUrl(url);
+};
+
+// --- COMPONENT: DANH SÁCH PHIM GỢI Ý (MÀU ĐỎ GỐC - CHỈ SAO MÀU VÀNG) ---
 function MovieHorizontalList({ title, subTitle, movies, loading }: { title: string, subTitle: string, movies: any[], loading: boolean }) {
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="animate-spin text-red-600" /></div>;
   if (movies.length === 0) return null;
@@ -21,23 +27,32 @@ function MovieHorizontalList({ title, subTitle, movies, loading }: { title: stri
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {movies.map((m) => (
-          <Link key={m.id} href={`/movies/${m.id}`} className="group space-y-3">
-            <div className="relative aspect-[2/3] rounded-2xl overflow-hidden border border-white/5 shadow-lg">
-              <img src={m.posterUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={m.title} />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                 <Play size={24} className="text-white fill-white" />
+        {movies.map((m) => {
+          const hasListRating = m.rating !== undefined && m.rating !== null && Number(m.rating) > 0;
+          return (
+            <Link key={m.id} href={`/movies/${m.id}`} className="group space-y-3 block">
+              <div className="relative aspect-[2/3] rounded-2xl overflow-hidden border border-white/5 shadow-lg bg-zinc-900">
+                <img src={resolveMovieImg(m.posterUrl)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={m.title} />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                   <Play size={24} className="text-white fill-white" />
+                </div>
               </div>
-            </div>
-            <div className="px-1">
-              <h4 className="text-[11px] font-black text-white uppercase truncate group-hover:text-red-500 transition-colors">{m.title}</h4>
-              <div className="flex items-center justify-between mt-1">
-                 <p className="text-[9px] font-bold text-zinc-600 uppercase">{m.genreName || "Phim"}</p>
-                 {m.rating && <span className="text-[9px] font-black text-yellow-500">★ {m.rating.toFixed(1)}</span>}
+              <div className="px-1">
+                <h4 className="text-[11px] font-black text-white uppercase truncate group-hover:text-red-500 transition-colors">{m.title}</h4>
+                <div className="flex items-center justify-between mt-1">
+                   <p className="text-[9px] font-bold text-zinc-600 uppercase">{m.genre?.name || m.genreName || "Phim"}</p>
+                   {hasListRating ? (
+                     <span className="text-[10px] font-black text-amber-500 flex items-center gap-0.5">
+                       ★ {Number(m.rating).toFixed(1)}
+                     </span>
+                   ) : (
+                     <span className="text-[8px] font-black text-zinc-500 bg-white/5 px-1.5 py-0.5 rounded uppercase">Mới</span>
+                   )}
+                </div>
               </div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
@@ -57,19 +72,7 @@ export default function MovieDetailPage({ params }: { params: Promise<{ id: stri
   const [showTrailer, setShowTrailer] = useState(false);
 
   useEffect(() => {
-    const fetchMovieDetail = async () => {
-      try {
-        const response = await apiRequest(`/api/v1/movies/${movieId}`);
-        if (response.ok) {
-          const resData = await response.json();
-          const movieData = resData.data || resData;
-          setMovie(movieData);
-          fetchRelatedContent(movieData.genre?.id);
-        }
-      } catch (error) { toast.error("Không thể tải thông tin phim"); } 
-      finally { setLoading(false); }
-    };
-
+    // FIX BIẾN HÀM: Đưa hàm gợi ý lên trước để fetchMovieDetail có thể gọi một cách hợp pháp (Sửa lỗi Hoisting)
     const fetchRelatedContent = async (genreId: number) => {
       try {
         const resShowing = await apiRequest(`/api/v1/movies?status=SHOWING&genreId=${genreId}&size=5`);
@@ -82,9 +85,29 @@ export default function MovieDetailPage({ params }: { params: Promise<{ id: stri
           const data = await resUpcoming.json();
           setUpcomingMovies(data.data?.content || []);
         }
-      } catch (err) { console.error("Lỗi tải danh sách gợi ý", err); }
-      finally { setRelLoading(false); }
+      } catch (err) { 
+        console.error("Lỗi tải danh sách gợi ý", err); 
+      } finally { 
+        setRelLoading(false); 
+      }
     };
+
+    const fetchMovieDetail = async () => {
+      try {
+        const response = await apiRequest(`/api/v1/movies/${movieId}`);
+        if (response.ok) {
+          const resData = await response.json();
+          const movieData = resData.data || resData;
+          setMovie(movieData);
+          fetchRelatedContent(movieData.genre?.id || 1);
+        }
+      } catch (error) { 
+        toast.error("Không thể tải thông tin phim"); 
+      } finally { 
+        setLoading(false); 
+      }
+    };
+
     if (movieId) fetchMovieDetail();
   }, [movieId]);
 
@@ -96,6 +119,12 @@ export default function MovieDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   if (loading) return <div className="min-h-screen bg-[#050505] flex items-center justify-center"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div>;
+
+  // FIX NGẦM: Nếu không lấy được phim từ API thì ngắt trang luôn không cho chạy tiếp xuống dưới để tránh vỡ giao diện
+  if (!movie) return <div className="min-h-screen bg-[#050505] text-center pt-20 text-zinc-500 font-bold">Không tìm thấy thông tin phim hoặc máy chủ lỗi!</div>;
+
+  // LẤY DỮ LIỆU THẬT: Kiểm tra trực tiếp giá trị cột rating tổng của thực thể Movie từ DB
+  const hasRating = movie.rating !== undefined && movie.rating !== null && Number(movie.rating) > 0;
 
   return (
     <div className="min-h-screen bg-[#050505] text-zinc-300 font-sans pb-20">
@@ -116,25 +145,22 @@ export default function MovieDetailPage({ params }: { params: Promise<{ id: stri
 
       <ReviewModal isOpen={isReviewOpen} onClose={() => setIsReviewOpen(false)} movieTitle={movie.title} movieId={movieId} />
       
-      {/* Hero Banner - CHỨA NÚT BACK NGAY TRÊN ẢNH */}
+      {/* Hero Banner */}
       <section className="relative h-[65vh] w-full overflow-hidden">
         <div className="absolute inset-0">
-          <img src={movie.posterUrl} className="w-full h-full object-cover opacity-30 blur-md scale-110" alt="nền" />          
+          <img src={resolveMovieImg(movie.posterUrl)} className="w-full h-full object-cover opacity-30 blur-md scale-110" alt="nền" />          
           <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent" />
         </div>
 
-        {/* NÚT QUAY LẠI - STYLE TỐI GIẢN CINEMA */}
+        {/* NÚT QUAY LẠI */}
         <div className="absolute top-8 left-8 z-[50]">
           <button 
             onClick={() => router.back()} 
             className="group flex items-center gap-2 transition-all duration-300"
           >
-            {/* Vòng tròn icon */}
             <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white/20 bg-black/20 backdrop-blur-sm group-hover:bg-red-600 group-hover:border-red-600 transition-all duration-300">
               <ArrowLeft size={20} className="text-white" />
             </div>
-            
-            {/* Chữ hiện ra khi hover */}
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
               Quay lại
             </span>
@@ -144,7 +170,7 @@ export default function MovieDetailPage({ params }: { params: Promise<{ id: stri
         <div className="absolute inset-0 flex items-end pb-12">
           <div className="max-w-6xl mx-auto px-24 w-full flex flex-col md:flex-row gap-8 items-center md:items-end">
             <div className="relative w-44 md:w-56 aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 shrink-0 cursor-pointer group" onClick={() => setShowTrailer(true)}>
-              <img src={movie.posterUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="poster" />
+              <img src={resolveMovieImg(movie.posterUrl)} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="poster" />
               <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="p-4 bg-red-600 rounded-full scale-75 group-hover:scale-100 transition-transform duration-500 shadow-xl">
                   <Play size={30} className="text-white fill-white" />
@@ -158,20 +184,25 @@ export default function MovieDetailPage({ params }: { params: Promise<{ id: stri
                 <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-md text-[9px] font-black uppercase border border-white/10">{movie.duration} PHÚT</span>
               </div>
               <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase text-white leading-[0.9] drop-shadow-2xl">{movie.title}</h1>
+              
+              {/* HIỂN THỊ RATING TỔNG: Lấy từ cột rating của Movie, chỉ ngôi sao và chữ mang màu hổ phách vàng kim */}
               <div className="flex items-center justify-center md:justify-start gap-6">
-                 <div className="flex items-center gap-2 text-yellow-500">
-                    <Star size={20} fill="currentColor" />
-                    <span className="text-2xl font-black italic">{movie.rating?.toFixed(1) || "MỚI"}</span>
+                 <div className="flex items-center gap-2">
+                    <Star size={20} fill={hasRating ? "#f59e0b" : "none"} className={hasRating ? "text-amber-500 animate-pulse" : "text-zinc-600"} />
+                    <span className={hasRating ? "text-2xl font-black italic text-white" : "text-[10px] font-black uppercase tracking-wider bg-white/5 px-2.5 py-1 rounded-lg border border-white/5 text-zinc-500"}>
+                      {hasRating ? Number(movie.rating).toFixed(1) : "CHƯA CÓ ĐÁNH GIÁ"}
+                    </span>
                  </div>
                  <p className="text-[11px] font-bold uppercase text-zinc-400 tracking-[0.2em] border-l border-white/20 pl-6">{movie.genre?.name}</p>
               </div>
+              
               <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-4">
                 {movie.status === "SHOWING" && (
                   <Link href={`/movies/${movieId}/booking/`} className="flex items-center gap-3 px-8 py-4 bg-white text-black rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-xl active:scale-95">
                     <Ticket size={18} /> ĐẶT VÉ NGAY
                   </Link>
                 )}
-                <button onClick={() => setShowTrailer(true)} className="px-8 py-4 bg-white/5 backdrop-blur-md border border-white/10 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white/20 transition-all active:scale-95">XEM TRAILER</button>
+                <button onClick={() => setShowTrailer(true)} className="px-8 py-4 bg-white/5 backdrop-blur-md border border-white/10 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white/10 transition-all active:scale-95">XEM TRAILER</button>
               </div>
             </div>
           </div>
@@ -191,7 +222,7 @@ export default function MovieDetailPage({ params }: { params: Promise<{ id: stri
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-8 bg-zinc-900/20 rounded-3xl border border-white/5 text-center backdrop-blur-sm">
               <InfoBox icon={<Film size={18}/>} label="ĐẠO DIỄN" value={movie.director} />
               <InfoBox icon={<Award size={18}/>} label="QUỐC GIA" value={movie.country} />
-              <InfoBox icon={<Globe size={18}/>} label="NĂM" value={movie.releaseDate ? new Date(movie.releaseDate).getFullYear().toString() : "2024"} />
+              <InfoBox icon={<Globe size={18}/>} label="NĂM" value={movie.releaseDate ? new Date(movie.releaseDate).getFullYear().toString() : "2026"} />
               <InfoBox icon={<Calendar size={18}/>} label="THỂ LOẠI" value={movie.genre?.name} />
             </div>
           </div>

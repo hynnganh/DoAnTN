@@ -30,11 +30,13 @@ export default function MovieCard({ id, title, image, rating, status }: MovieCar
     return getImageUrl(image);
   }, [image]);
 
-  // NGHIỆP VỤ RATING: 
-  const hasRating = rating && Number(rating) > 0;
-  const displayRating = hasRating ? Number(rating).toFixed(1) : "NEW";
+  // LẤY DỮ LIỆU ĐỘNG THẬT: Kiểm tra giá trị rating tổng từ Database
+  const hasRating = rating !== undefined && rating !== null && Number(rating) > 0;
+  
+  // Nếu có điểm từ DB thì lấy số thực 1 chữ số thập phân, ngược lại hiện thông báo trạng thái
+  const displayRating = hasRating ? Number(rating).toFixed(1) : "CHƯA CÓ ĐÁNH GIÁ";
 
-  // NGHIỆP VỤ ẢNH LỖI:
+  // NGHIỆP VỤ XỬ LÝ ẢNH LỖI (FALLBACK IMAGE):
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     e.currentTarget.src = "https://png.pngtree.com/png-clipart/20190611/original/pngtree-surprised-face-expression-png-image_2888052.jpg";
   };
@@ -53,26 +55,31 @@ export default function MovieCard({ id, title, image, rating, status }: MovieCar
           loading="lazy"
         />
         
-        {/* Lớp phủ Gradient mượt mà */}
+        {/* Lớp phủ Gradient mượt mà chất rạp */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-90 transition-opacity duration-500" />
 
-        {/* --- Badge Rating (Top Left) --- */}
-        <div className={`absolute top-4 left-4 flex items-center gap-1.5 backdrop-blur-md px-3 py-1.5 rounded-xl border z-10 
-          ${hasRating ? 'bg-black/40 border-yellow-500/30' : 'bg-red-600 border-red-500/50'}`}>
-          {hasRating && <Star size={12} className="fill-yellow-500 text-yellow-500" />}
-          <span className="text-white text-[11px] font-black tracking-tighter uppercase">
+        {/* --- DỮ LIỆU ĐỘNG: Badge hiển thị Rating (Top Left) --- */}
+        <div className={`absolute top-4 left-4 flex items-center gap-1.5 backdrop-blur-md px-3 py-1.5 rounded-xl border z-10 transition-all duration-300
+          ${hasRating 
+            ? 'bg-black/50 border-amber-500/30 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.15)]' 
+            : 'bg-zinc-900/80 border-white/10 text-zinc-400'}`}>
+          
+          {/* Chỉ hiển thị ngôi sao màu vàng kim khi bộ phim thực sự đã có lượt đánh giá từ bảng review */}
+          {hasRating && <Star size={12} className="fill-amber-500 text-amber-500 animate-pulse" />}
+          
+          <span className={`font-black tracking-tighter uppercase ${hasRating ? 'text-[11px] text-white' : 'text-[9px]'}`}>
             {displayRating}
           </span>
         </div>
 
-        {/* --- Badge Format (Top Right) --- */}
+        {/* --- Badge định dạng phim (Top Right) --- */}
         {isShowing && (
           <div className="absolute top-4 right-4 bg-blue-600/50 backdrop-blur-md border border-blue-400/20 px-2 py-1 rounded-lg z-10">
             <span className="text-white text-[9px] font-black italic tracking-widest uppercase">IMAX</span>
           </div>
         )}
 
-        {/* --- Nút Action khi Hover --- */}
+        {/* --- Hệ thống nút tương tác khi Hover chuột --- */}
         <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-6 group-hover:translate-y-0 z-30 px-6 gap-3">
           <Link href={`/movies/${id}`} className="w-full">
             <button className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl transition-all active:scale-95
@@ -102,6 +109,7 @@ export default function MovieCard({ id, title, image, rating, status }: MovieCar
       {/* 2. KHU VỰC THÔNG TIN (INFO PANEL) */}
       <div className="p-6 relative flex-grow flex flex-col justify-between">
         <div>
+          {/* Giữ nguyên màu đỏ gốc của hệ thống khi hover chuột vào tiêu đề phim */}
           <h3 className="font-black text-white text-[18px] md:text-[20px] line-clamp-2 group-hover:text-red-500 transition-colors duration-300 uppercase tracking-tighter leading-tight mb-3 cursor-pointer">
             {title}
           </h3>
@@ -119,6 +127,7 @@ export default function MovieCard({ id, title, image, rating, status }: MovieCar
           </div>
         </div>
 
+        {/* Thanh line trang trí chạy mượt theo trạng thái màu gốc dưới đáy thẻ */}
         <div className={`h-[2px] w-0 transition-all duration-700 group-hover:w-full 
           ${isShowing ? 'bg-red-600' : 'bg-blue-600'}`} />
       </div>

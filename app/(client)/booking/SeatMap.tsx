@@ -1,9 +1,9 @@
 "use client";
-import React, { useRef, useMemo, useCallback } from 'react';
+import React, { useRef, useMemo, useCallback, useState, useEffect } from 'react';
 import QuickPinchZoom, { make3dTransformValue } from 'react-quick-pinch-zoom';
 import { Heart, Armchair } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 
-// FIX: Khai báo trực tiếp SeatType tại đây để component hoạt động độc lập, không bị lỗi import chéo
 export interface SeatType {
   id: number | string;
   seatRow: string;
@@ -43,8 +43,84 @@ const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: SeatMapProp
     }
   }, []);
 
+  // ================= THUẬT TOÁN CHỐNG ĐỂ TRỐNG GHẾ ĐƠN LẺ REAL-TIME =================
+  const validateSeatSelection = useCallback((clickedSeat: SeatType): boolean => {
+    // Mô phỏng danh sách ghế ĐÃ CHỌN mới nếu như thực hiện cú click này
+    const isCurrentlySelected = selectedSeats.some(s => s.id === clickedSeat.id);
+    const simulatedSelected = isCurrentlySelected
+      ? selectedSeats.filter(s => s.id !== clickedSeat.id)
+      : [...selectedSeats, clickedSeat];
+
+    // Duyệt qua từng hàng ghế độc lập để kiểm tra
+    for (const row of uniqueRows) {
+      const rowSeats = dbSeats
+        .filter(s => s.seatRow === row)
+        .sort((a, b) => (parseInt(a.seatNumber) || 0) - (parseInt(b.seatNumber) || 0));
+
+      const len = rowSeats.length;
+      for (let i = 0; i < len; i++) {
+        const currentSeat = rowSeats[i];
+        const statusStr = String(currentSeat.status).toUpperCase();
+        const isOccupied = statusStr === 'OCCUPIED' || statusStr === 'SOLD';
+        const isSimSelected = simulatedSelected.some(s => s.id === currentSeat.id);
+
+        // Trạng thái ghế trống sau khi giả định lượt click diễn ra thành công
+        const isFreePostBooking = !isOccupied && !isSimSelected;
+
+        if (isFreePostBooking) {
+          // Kiểm tra biên chặn bên trái (Có thể là tường rạp hoặc ghế đã bị chiếm/được chọn)
+          let leftBlocked = false;
+          if (i === 0) {
+            leftBlocked = true; 
+          } else {
+            const leftSeat = rowSeats[i - 1];
+            const leftOccupied = String(leftSeat.status).toUpperCase() === 'OCCUPIED' || String(leftSeat.status).toUpperCase() === 'SOLD';
+            const leftSimSelected = simulatedSelected.some(s => s.id === leftSeat.id);
+            if (leftOccupied || leftSimSelected) leftBlocked = true;
+          }
+
+          // Kiểm tra biên chặn bên phải (Có thể là tường rạp hoặc ghế đã bị chiếm/được chọn)
+          let rightBlocked = false;
+          if (i === len - 1) {
+            rightBlocked = true; 
+          } else {
+            const rightSeat = rowSeats[i + 1];
+            const rightOccupied = String(rightSeat.status).toUpperCase() === 'OCCUPIED' || String(rightSeat.status).toUpperCase() === 'SOLD';
+            const rightSimSelected = simulatedSelected.some(s => s.id === rightSeat.id);
+            if (rightOccupied || rightSimSelected) rightBlocked = true;
+          }
+
+          // Nếu cả 2 bên của một ghế trống đều bị chặn cứng -> Ghế này bị cô lập lẻ loi!
+          if (leftBlocked && rightBlocked) {
+            // Xác thực xem vết nghẽn ghế này có tác động/liên quan trực tiếp từ các ghế user đang chọn không
+            let causedByUser = false;
+            if (i > 0 && simulatedSelected.some(s => s.id === rowSeats[i - 1].id)) causedByUser = true;
+            if (i < len - 1 && simulatedSelected.some(s => s.id === rowSeats[i + 1].id)) causedByUser = true;
+
+            if (causedByUser) {
+              const label = currentSeat.name || `${currentSeat.seatRow}${currentSeat.seatNumber}`;
+              toast.error(`Không được để lại ghế trống đơn lẻ (${label}) ở giữa hoặc đầu hàng!`);
+              return false; // Vi phạm ràng buộc, không cho click tiếp
+            }
+          }
+        }
+      }
+    }
+    return true; // Hợp lệ, cho phép xử lý tiếp hành động
+  }, [dbSeats, selectedSeats, uniqueRows]);
+
+  // Hàm trung gian xử lý sự kiện click chuột chọn ghế
+  const handleSeatClick = (seat: SeatType) => {
+    const isValid = validateSeatSelection(seat);
+    if (isValid) {
+      onToggleSeat(seat); // Nếu hợp lệ thì mới đẩy data ra ngoài component cha
+    }
+  };
+
   return (
     <div className="w-full h-full min-h-[800px] relative bg-[#010101] overflow-hidden p-4 md:p-5">
+      <Toaster position="top-center" reverseOrder={false} />
+      
       <QuickPinchZoom 
         onUpdate={onUpdate} 
         wheelScaleFactor={0.05} 
@@ -87,7 +163,7 @@ const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: SeatMapProp
                       <button
                         key={seatData.id}
                         disabled={isOccupied}
-                        onClick={() => onToggleSeat(seatData)}
+                        onClick={() => handleSeatClick(seatData)} // Thay đổi hàm gọi tại đây
                         className={`
                           relative transition-all duration-300 flex flex-col items-center justify-center shrink-0 rounded-xl border
                           ${isSweet ? 'w-20 h-10' : 'w-9 h-9'} 
