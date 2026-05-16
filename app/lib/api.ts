@@ -7,8 +7,7 @@ export async function apiRequest(
   options: RequestInit = {},
   role?: RoleType
 ) {
-  const token = getTokenByRole(role);
-
+  const token = localStorage.getItem('token_admin') || localStorage.getItem('token_user') || localStorage.getItem('token');
   const headers: Record<string, string> = {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers as Record<string, string>),

@@ -1,10 +1,9 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { ShoppingBag, Eye, EyeOff, Loader2, Search, Info, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { ShoppingBag, Loader2, Search, CheckCircle2, XCircle } from "lucide-react";
 import { apiRequest } from "@/app/lib/api";
 import toast, { Toaster } from "react-hot-toast";
 
-// FIX 1: Tên field phải là 'available' để khớp với JSON của bạn
 interface ComboAdmin {
   id: number;
   name: string;
@@ -20,19 +19,34 @@ export default function AdminComboPage() {
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Hàm helper lấy token admin cô lập một cách an toàn
+  const getAdminToken = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("token_admin") || "";
+    }
+    return "";
+  };
+
   const loadCombos = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const res = await apiRequest("/api/v1/admin/cinema-combos");
+      const token = getAdminToken();
+
+      // Đính kèm trực tiếp token_admin vào headers để tránh phụ thuộc hàm apiRequest cũ
+      const res = await apiRequest("/api/v1/admin/cinema-combos", {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      
       const result = await res.json();
       
       if (res.ok) {
-        // FIX 2: Vì JSON của bạn là một Array trực tiếp [ {...}, {...} ]
-        // nên ta dùng result luôn, không dùng result.data
         const data = Array.isArray(result) ? result : (result.data || []);
         setCombos(data);
       } else {
-        toast.error(result.message || "Không thể tải danh mục");
+        toast.error(result.message || "Không thể tải danh mục combo");
       }
     } catch (e) {
       toast.error("Lỗi kết nối máy chủ");
@@ -50,23 +64,29 @@ export default function AdminComboPage() {
     setTogglingId(comboId);
 
     try {
+      const token = getAdminToken();
+
+      // Đính kèm token_admin cho hành động cập nhật trạng thái bật/tắt combo
       const res = await apiRequest(`/api/v1/admin/cinema-combos/${comboId}/toggle`, {
         method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
       });
 
       if (res.ok) {
-        // FIX 3: Cập nhật field 'available'
         setCombos((prev) =>
           prev.map((c) =>
             c.id === comboId ? { ...c, available: !c.available } : c
           )
         );
-        toast.success("Đã cập nhật trạng thái");
+        toast.success("Đã cập nhật trạng thái combo thành công");
       } else {
-        toast.error("Không thể cập nhật");
+        toast.error("Không thể cập nhật trạng thái");
       }
     } catch (e) {
-      toast.error("Lỗi kết nối");
+      toast.error("Lỗi kết nối mạng");
     } finally {
       setTogglingId(null);
     }
@@ -91,7 +111,7 @@ export default function AdminComboPage() {
               <h1 className="text-2xl font-black uppercase tracking-tight text-white">Thực đơn chi nhánh</h1>
             </div>
             <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-2">
-              Chi nhánh đang quản lý: <span className="text-orange-500">Rạp của bạn</span>
+              Chi nhánh đang quản lý: <span className="text-orange-500">Hệ thống A&K Cinema</span>
             </p>
           </div>
 
@@ -133,13 +153,13 @@ export default function AdminComboPage() {
                   />
                   <div className="absolute top-4 right-4">
                     {combo.available ? (
-                        <div className="bg-orange-600 text-white p-1.5 rounded-full shadow-lg">
-                            <CheckCircle2 size={16} />
-                        </div>
+                      <div className="bg-orange-600 text-white p-1.5 rounded-full shadow-lg">
+                        <CheckCircle2 size={16} />
+                      </div>
                     ) : (
-                        <div className="bg-zinc-900 text-zinc-500 p-1.5 rounded-full border border-white/5">
-                            <XCircle size={16} />
-                        </div>
+                      <div className="bg-zinc-900 text-zinc-500 p-1.5 rounded-full border border-white/5">
+                        <XCircle size={16} />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -175,7 +195,7 @@ export default function AdminComboPage() {
                       />
                       {togglingId === combo.id && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <Loader2 size={12} className="animate-spin text-white" />
+                          <Loader2 size={12} className="animate-spin text-white" />
                         </div>
                       )}
                     </button>
@@ -190,7 +210,7 @@ export default function AdminComboPage() {
         {!loading && filteredCombos.length === 0 && (
           <div className="py-32 text-center border-2 border-dashed border-white/5 rounded-[3rem] bg-zinc-900/10">
             <ShoppingBag className="mx-auto text-zinc-800 mb-4" size={48} />
-            <p className="text-xs text-zinc-600 font-bold uppercase tracking-widest">Không có combo nào</p>
+            <p className="text-xs text-zinc-600 font-bold uppercase tracking-widest">Không có combo nào phù hợp</p>
           </div>
         )}
       </div>
