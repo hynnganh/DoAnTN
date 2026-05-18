@@ -20,7 +20,7 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const navLinks = [
+  const danhSachMenu = [
     { name: 'Tổng quan', icon: LayoutDashboard, href: '/admin' },
     { name: 'Phòng chiếu', icon: Monitor, href: '/admin/rooms' }, 
     { name: 'Lịch chiếu', icon: Calendar, href: '/admin/showtimes' },
@@ -29,12 +29,12 @@ export default function AdminSidebar() {
     { name: 'Khách hàng', icon: Users, href: '/admin/users' },
   ];
 
-  const handleLogout = () => {
-    const tokenKey = 'token_admin';
+  const xuLyDangXuat = () => {
+    const keyToken = 'token_admin';
 
-    localStorage.removeItem(tokenKey);
+    localStorage.removeItem(keyToken);
     localStorage.removeItem('user_info_admin');
-    Cookies.remove(tokenKey, { path: '/' });
+    Cookies.remove(keyToken, { path: '/' });
 
     window.dispatchEvent(new Event("auth-changed"));
 
@@ -46,72 +46,72 @@ export default function AdminSidebar() {
   };
 
   return (
-    <aside className="w-64 h-screen bg-[#080808] border-r border-white/5 flex flex-col sticky top-0 overflow-hidden z-[100]">
+    <aside className="w-64 h-screen bg-[#060608] border-r border-zinc-900 flex flex-col sticky top-0 overflow-hidden z-[100]">
       
-      {/* Logo Section - A&K Branding */}
-      <div className="p-8 flex items-center gap-4 shrink-0 group cursor-pointer" onClick={() => router.push('/admin')}>
+      {/* PHẦN LOGO THƯƠNG HIỆU */}
+      <div className="p-6 flex items-center gap-3 shrink-0 group cursor-pointer" onClick={() => router.push('/admin')}>
         <div className="relative">
-          <div className="absolute inset-0 bg-red-600 blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
-          <div className="relative w-10 h-10 bg-zinc-900 border border-white/10 rounded-xl flex items-center justify-center font-black text-red-600 italic text-xl shadow-2xl">
-            <Film size={20} />
+          <div className="absolute inset-0 bg-red-600 blur-md opacity-20 group-hover:opacity-40 transition-opacity" />
+          <div className="relative w-9 h-9 bg-zinc-950 border border-zinc-900 rounded-xl flex items-center justify-center font-black text-red-600 text-lg shadow-md">
+            <Film size={18} />
           </div>
         </div>
         <div className="flex flex-col">
-          <span className="text-white font-[1000] uppercase italic tracking-tighter text-lg leading-none">
+          <span className="text-white font-black uppercase tracking-tight text-base leading-none">
             A&K <span className="text-red-600">Admin</span>
           </span>
-          <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-[0.3em] mt-1">Management Hub</span>
+          <span className="text-[8px] text-zinc-600 font-black uppercase tracking-wider mt-1">Trung tâm điều hành</span>
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto custom-scrollbar py-4">
-        <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.2em] px-4 mb-4">Main Menu</p>
+      {/* DANH SÁCH ĐIỀU HƯỚNG */}
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar py-2">
+        <p className="text-[8px] font-black text-zinc-600 uppercase tracking-wider px-3 mb-3">Danh mục quản lý</p>
         
-        {navLinks.map((link) => {
-          const isActive = pathname === link.href;
+        {danhSachMenu.map((link) => {
+          const dangKichHoat = pathname === link.href;
           return (
             <Link
               key={link.href}
               href={link.href}
-              className={`flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 group ${
-                isActive 
-                  ? 'bg-red-600 text-white shadow-lg shadow-red-600/20 translate-x-1' 
-                  : 'text-zinc-500 hover:bg-white/[0.03] hover:text-zinc-200'
+              className={`flex items-center justify-between px-3 py-3 rounded-xl transition-all group ${
+                dangKichHoat 
+                  ? 'bg-red-600 text-white shadow-md shadow-red-600/10 translate-x-0.5' 
+                  : 'text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-200'
               }`}
             >
               <div className="flex items-center gap-3">
                 <link.icon 
-                  size={18} 
-                  className={`${isActive ? 'text-white' : 'group-hover:text-red-600 transition-colors duration-300'}`} 
+                  size={16} 
+                  className={`${dangKichHoat ? 'text-white' : 'group-hover:text-red-600 transition-colors'}`} 
                 />
-                <span className="text-[10px] font-black uppercase tracking-widest">{link.name}</span>
+                <span className="text-[10px] font-black uppercase tracking-wider">{link.name}</span>
               </div>
-              {isActive && <ChevronRight size={14} className="animate-in fade-in slide-in-from-left-2" />}
+              {dangKichHoat && <ChevronRight size={12} className="animate-in fade-in slide-in-from-left-1" />}
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom Section - Logout */}
-      <div className="p-4 mt-auto border-t border-white/5 shrink-0 bg-[#0a0a0a]">
-        <div className="p-4 bg-zinc-900/40 border border-white/5 rounded-3xl space-y-4">
-            <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-red-600/10 flex items-center justify-center">
-                    <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+      {/* PHẦN DƯỚI - TRẠNG THÁI MÁY CHỦ & ĐĂNG XUẤT */}
+      <div className="p-3 mt-auto border-t border-zinc-900 shrink-0 bg-[#060608]">
+        <div className="p-3.5 bg-zinc-950 border border-zinc-900 rounded-xl space-y-3.5">
+            <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-red-600/5 border border-red-600/10 flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse" />
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-[9px] text-white font-black uppercase italic">Server Status</span>
-                    <span className="text-[8px] text-green-500 font-bold uppercase">Online</span>
+                    <span className="text-[8px] text-zinc-500 font-black uppercase tracking-wider leading-none mb-0.5">Trạng thái máy chủ</span>
+                    <span className="text-[8px] text-emerald-500 font-black uppercase tracking-wider">Đang hoạt động</span>
                 </div>
             </div>
 
             <button 
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-3 py-3 text-zinc-500 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all bg-black/40 hover:bg-red-600 border border-white/5 rounded-2xl group shadow-inner"
+              onClick={xuLyDangXuat}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-zinc-500 hover:text-white text-[9px] font-black uppercase tracking-wider transition-all bg-[#060608] hover:bg-red-600 border border-zinc-900 hover:border-transparent rounded-lg group"
             >
-              <LogOut size={14} className="group-hover:-translate-x-1 transition-transform" /> 
-              <span>Đăng xuất</span>
+              <LogOut size={13} className="group-hover:-translate-x-0.5 transition-transform" /> 
+              <span>Đăng xuất hệ thống</span>
             </button>
         </div>
       </div>

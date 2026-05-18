@@ -1,26 +1,39 @@
 "use client";
+
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Trash2, Edit3, Ticket, Calendar, Film, MapPin, Info, AlertCircle, Lock } from 'lucide-react';
+import { Plus, Search, Trash2, Edit3, Ticket, Calendar, Hash, Loader2, AlertCircle, Lock } from 'lucide-react';
 import { apiSuperAdminRequest } from '@/app/lib/api';
 import toast, { Toaster } from 'react-hot-toast';
 import VoucherModal from './VoucherModal';
 
+export interface Voucher {
+  id: number;
+  code: string;
+  title: string;
+  discountValue: number;
+  usedCount: number;
+  usageLimit: number;
+  endDate: string;
+}
+
 export default function AdminVoucherManager() {
-  const [vouchers, setVouchers] = useState<any[]>([]);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedVoucher, setSelectedVoucher] = useState<any>(null);
+  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchVouchers = async () => {
     setLoading(true);
     try {
       const res = await apiSuperAdminRequest('/api/v1/vouchers');
-      const json = await res.json();
-      if (res.ok) setVouchers(json.data || []);
+      if (res.ok) {
+        const json = await res.json();
+        setVouchers(json.data || []);
+      }
     } catch (e) {
       toast.error("Lỗi kết nối database");
     } finally {
@@ -33,7 +46,8 @@ export default function AdminVoucherManager() {
   const formatCurrency = (v: number) => new Intl.NumberFormat('vi-VN').format(v) + 'đ';
   const formatDate = (d: string) => new Date(d).toLocaleDateString('vi-VN');
 
-  const handleOpenModal = (voucher: any = null) => {
+  // Đã sửa: Định nghĩa nhận Voucher hoặc null chuẩn xác
+  const handleOpenModal = (voucher: Voucher | null = null) => {
     setSelectedVoucher(voucher);
     setIsModalOpen(true);
   };
@@ -69,12 +83,12 @@ export default function AdminVoucherManager() {
     setIsSubmitting(true);
     try {
       const res = await apiSuperAdminRequest(`/api/v1/vouchers/${selectedVoucher.id}`, { method: 'DELETE' });
-      const result = await res.json();
       if (res.ok) {
         toast.success("Đã xóa vĩnh viễn");
         fetchVouchers();
         setDeleteModalOpen(false);
       } else {
+        const result = await res.json();
         toast.error(result.message || "Không thể xóa do ràng buộc dữ liệu");
       }
     } catch (e) {
@@ -84,156 +98,175 @@ export default function AdminVoucherManager() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#08080a] text-zinc-400 font-sans p-4 md:p-8">
-      {/* CSS fix ẩn thanh scrollbar */}
-      <style jsx global>{`
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
-        }
-      `}</style>
+  const filteredVouchers = vouchers.filter(v => 
+    v.code?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    v.title?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
+  return (
+    <div className="min-h-screen bg-[#020202] text-zinc-400 p-4 md:p-6 font-sans tracking-tight select-none">
+      
       <Toaster position="top-right" reverseOrder={false} />
 
-      {/* Header Section */}
-      <div className="max-w-7xl mx-auto mb-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-4xl font-black text-white uppercase tracking-tighter italic flex items-center gap-4">
-            <Ticket className="text-red-600" size={40} />
-            Vouchers
-          </h1>
-          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.3em] mt-2 ml-1">Trung tâm điều hành mã giảm giá</p>
-        </div>
+      <div className="max-w-6xl mx-auto space-y-4">
         
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} />
-            <input 
-              type="text" placeholder="Tìm mã hoặc tên..." 
-              className="bg-zinc-900/50 border border-white/5 rounded-2xl py-3 pl-12 pr-6 text-xs focus:border-red-600/50 outline-none w-72 backdrop-blur-md transition-all"
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        {/* HEADER SECTION */}
+        <div className="flex items-center justify-between border-b border-zinc-900 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-600/10 border border-red-600/20 rounded-lg text-red-600">
+              <Ticket size={16} />
+            </div>
+            <div className="space-y-0.5">
+              <h1 className="text-lg font-black uppercase tracking-tight text-white leading-none">
+                Trung tâm <span className="text-red-600">Voucher</span>
+              </h1>
+              <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest leading-none">
+                Hệ thống quản lý điều hành mã giảm giá thực tế • Quyền SUPER_ADMIN
+              </p>
+            </div>
           </div>
+          {/* Đã sửa: Truyền null rõ ràng để kích hoạt Form thêm mới */}
           <button 
-            onClick={() => handleOpenModal()}
-            className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 transition-all shadow-lg active:scale-95 shadow-red-600/20"
+            onClick={() => handleOpenModal(null)}
+            className="h-9 bg-red-600 hover:bg-red-500 text-white px-4 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all shadow-md active:scale-95"
           >
-            <Plus size={18} /> Tạo mới
+            <Plus size={13} /> Tạo mới
           </button>
         </div>
-      </div>
 
-      {/* Main Table Content */}
-      <div className="max-w-7xl mx-auto bg-zinc-900/20 border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-xl shadow-2xl">
-        {/* Đã thêm class no-scrollbar vào đây */}
-        <div className="overflow-x-auto no-scrollbar">
-          <table className="w-full text-left border-separate border-spacing-0">
-            <thead>
-              <tr className="bg-white/[0.02] text-[10px] font-black uppercase text-zinc-500 tracking-widest">
-                <th className="px-8 py-6 border-b border-white/5">Thông tin Voucher</th>
-                <th className="px-8 py-6 border-b border-white/5">Giảm giá</th>
-                <th className="px-8 py-6 border-b border-white/5">Sử dụng</th>
-                <th className="px-8 py-6 border-b border-white/5">Hiệu lực</th>
-                <th className="px-8 py-6 border-b border-white/5 text-right">Quản lý</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {vouchers
-                .filter(v => v.code.toLowerCase().includes(searchTerm.toLowerCase()) || v.title.toLowerCase().includes(searchTerm.toLowerCase()))
-                .map((v) => (
-                <tr key={v.id} className="hover:bg-white/[0.01] transition-all group">
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-zinc-800/50 border border-white/5 rounded-2xl flex flex-col items-center justify-center group-hover:border-red-600/50 transition-colors">
-                        <span className="text-[9px] font-black text-red-500 leading-none">CODE</span>
-                        <span className="text-xs font-bold text-white mt-1 uppercase tracking-tighter">{v.code.substring(0, 4)}</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-white uppercase tracking-tight">{v.code}</p>
-                        <p className="text-[10px] text-zinc-600 font-medium mt-1 italic truncate max-w-[200px]">{v.title}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6 font-black text-white italic">
-                    {v.discountValue < 100 ? `-${v.discountValue}%` : `-${formatCurrency(v.discountValue)}`}
-                  </td>
-                  <td className="px-8 py-6">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between items-center w-32">
-                        <span className="text-[9px] font-black uppercase text-zinc-500">{v.usedCount}/{v.usageLimit}</span>
-                        <span className="text-[8px] font-bold text-zinc-600">{Math.round((v.usedCount/v.usageLimit)*100)}%</span>
-                      </div>
-                      <div className="w-32 h-1 bg-zinc-800 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full transition-all duration-1000 ${v.usedCount >= v.usageLimit ? 'bg-zinc-600' : 'bg-red-600'}`} 
-                          style={{ width: `${Math.min((v.usedCount/v.usageLimit)*100, 100)}%` }} 
-                        />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase flex items-center gap-2">
-                      <Calendar size={12} className="text-zinc-700" />
-                      {formatDate(v.endDate)}
-                    </span>
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <button 
-                        onClick={() => handleOpenModal(v)} 
-                        className="w-10 h-10 flex items-center justify-center hover:bg-white hover:text-black rounded-xl text-zinc-500 transition-all active:scale-90"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-
-                      {v.usedCount > 0 ? (
-                        <div className="relative group/lock">
-                          <button 
-                            className="w-10 h-10 flex items-center justify-center bg-zinc-900/50 text-zinc-800 rounded-xl cursor-not-allowed"
-                            disabled
-                          >
-                            <Lock size={16} className="opacity-20" />
-                          </button>
-                          <div className="absolute bottom-full right-0 mb-3 w-40 p-2 bg-red-600 text-white text-[8px] font-black uppercase rounded-lg opacity-0 group-hover/lock:opacity-100 transition-all pointer-events-none translate-y-2 group-hover/lock:translate-y-0 shadow-xl shadow-red-600/20 text-center">
-                            Đã có {v.usedCount} khách lưu mã này
-                            <div className="absolute top-full right-4 border-8 border-transparent border-t-red-600" />
-                          </div>
-                        </div>
-                      ) : (
-                        <button 
-                          onClick={() => { setSelectedVoucher(v); setDeleteModalOpen(true); }} 
-                          className="w-10 h-10 flex items-center justify-center hover:bg-red-600/10 hover:text-red-500 rounded-xl text-zinc-500 transition-all active:scale-90"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          
-          {loading && (
-            <div className="py-32 flex flex-col items-center justify-center gap-4">
-              <div className="w-10 h-10 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 animate-pulse">Syncing Database...</span>
-            </div>
-          )}
-
-          {!loading && vouchers.length === 0 && (
-            <div className="py-32 text-center">
-              <AlertCircle className="mx-auto text-zinc-800 mb-4" size={48} />
-              <p className="text-[10px] font-black uppercase text-zinc-600 tracking-widest">Không tìm thấy voucher nào</p>
-            </div>
-          )}
+        {/* INPUT TÌM KIẾM CHUẨN FORM SẮC NÉT */}
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-red-600 transition-colors" size={13} />
+          <input 
+            type="text" 
+            placeholder="TÌM KIẾM MÃ VOUCHER, TIÊU ĐỀ KHUYẾN MÃI..." 
+            className="w-full bg-zinc-950 border border-zinc-900 rounded-xl py-3 pl-11 text-[10px] font-black tracking-wider outline-none focus:border-zinc-800 placeholder:text-zinc-700 text-white uppercase"
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
+
+        {/* BẢNG DỮ LIỆU ĐƯỢC THU GỌN ROW HEIGHT THEO CHUẨN BASIC */}
+        <div className="bg-[#060608] border border-zinc-900 rounded-xl overflow-hidden relative min-h-[400px] shadow-sm">
+          {loading && (
+            <div className="absolute inset-0 bg-[#020202]/80 z-10 flex items-center justify-center backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="animate-spin text-red-600 opacity-80" size={24} />
+                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Đang truy xuất...</span>
+              </div>
+            </div>
+          )}
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-zinc-950/60 border-b border-zinc-900 text-[9px] font-black uppercase text-zinc-600 tracking-wider">
+                  <th className="py-3.5 px-6 w-[240px]">Thông tin Voucher</th>
+                  <th className="py-3.5 px-4 w-[150px]">Mức giảm giá</th>
+                  <th className="py-3.5 px-4 w-[180px]">Giới hạn sử dụng</th>
+                  <th className="py-3.5 px-4 w-[140px]">Ngày hết hạn</th>
+                  <th className="py-3.5 px-6 w-[120px] text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-900/30 text-[11px]">
+                {filteredVouchers.length > 0 ? filteredVouchers.map((v) => (
+                  <tr key={v.id} className="hover:bg-zinc-950/40 group transition-all">
+                    
+                    {/* Thông tin Voucher */}
+                    <td className="py-3 px-6">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-zinc-950 border border-zinc-900 flex items-center justify-center text-zinc-700 group-hover:text-red-600 group-hover:border-red-900/20 transition-colors">
+                          <Hash size={12} />
+                        </div>
+                        <div className="space-y-0.5 max-w-[180px]">
+                          <p className="font-black tracking-tight text-zinc-200 uppercase">#{v.code}</p>
+                          <p className="text-[9px] font-bold text-zinc-600 uppercase truncate leading-none">
+                            {v.title}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Giảm giá */}
+                    <td className="py-3 px-4 font-black text-zinc-200 tracking-tight">
+                      {v.discountValue < 100 ? `-${v.discountValue}%` : `-${formatCurrency(v.discountValue)}`}
+                    </td>
+
+                    {/* Sử dụng */}
+                    <td className="py-3 px-4">
+                      <div className="flex flex-col gap-1 w-32">
+                        <div className="flex justify-between items-center text-[9px] font-black uppercase">
+                          <span className="text-zinc-500">{v.usedCount}/{v.usageLimit}</span>
+                          <span className="text-zinc-600">{Math.round((v.usedCount / v.usageLimit) * 100)}%</span>
+                        </div>
+                        <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden border border-white/[0.02]">
+                          <div 
+                            className={`h-full transition-all duration-500 ${v.usedCount >= v.usageLimit ? 'bg-zinc-700' : 'bg-red-600'}`} 
+                            style={{ width: `${Math.min((v.usedCount / v.usageLimit) * 100, 100)}%` }} 
+                          />
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Hiệu lực */}
+                    <td className="py-3 px-4 text-zinc-400 text-[10px] font-semibold">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={11} className="text-zinc-600" />
+                        <span>{formatDate(v.endDate)}</span>
+                      </div>
+                    </td>
+
+                    {/* Thao tác tác vụ */}
+                    <td className="py-3 px-6 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button 
+                          onClick={() => handleOpenModal(v)} 
+                          className="w-7 h-7 inline-flex items-center justify-center bg-zinc-950 border border-zinc-900 hover:border-zinc-800 text-zinc-600 hover:text-white rounded-lg transition-all active:scale-95"
+                          title="Chỉnh sửa voucher"
+                        >
+                          <Edit3 size={12} />
+                        </button>
+
+                        {v.usedCount > 0 ? (
+                          <div className="relative group/lock">
+                            <button 
+                              className="w-7 h-7 inline-flex items-center justify-center bg-zinc-950 border border-zinc-900/40 text-zinc-800 rounded-lg cursor-not-allowed"
+                              disabled
+                            >
+                              <Lock size={12} className="opacity-30" />
+                            </button>
+                            <div className="absolute bottom-full right-0 mb-2 w-36 p-2 bg-red-600 text-white text-[8px] font-black uppercase rounded-md opacity-0 group-hover/lock:opacity-100 transition-all pointer-events-none translate-y-1 group-hover/lock:translate-y-0 shadow-lg text-center z-20">
+                              Đã có khách sử dụng
+                              <div className="absolute top-full right-2.5 border-4 border-transparent border-t-red-600" />
+                            </div>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => { setSelectedVoucher(v); setDeleteModalOpen(true); }} 
+                            className="w-7 h-7 inline-flex items-center justify-center bg-zinc-950 border border-zinc-900 hover:border-red-950 hover:text-red-500 rounded-lg text-zinc-600 transition-all active:scale-95"
+                            title="Xóa voucher"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+
+                  </tr>
+                )) : !loading && (
+                  <tr>
+                    <td colSpan={5} className="py-20 text-center text-[9px] font-black uppercase text-zinc-600 tracking-widest">
+                      Không tìm thấy dữ liệu voucher tương thích
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
 
+      {/* MODAL VOUCHER FORM THÊM/SỬA */}
       <VoucherModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -242,30 +275,31 @@ export default function AdminVoucherManager() {
         isSubmitting={isSubmitting}
       />
 
+      {/* MODAL XÓA CHUẨN ĐỒNG BỘ LAYOUT BASIC */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setDeleteModalOpen(false)} />
-          <div className="relative bg-[#0d0d0f] border border-white/5 p-8 rounded-[2.5rem] max-w-sm w-full animate-in zoom-in-95 shadow-2xl">
-            <div className="w-16 h-16 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <AlertCircle className="text-red-500" size={32} />
+          <div className="relative bg-[#060608] border border-zinc-900 p-6 rounded-xl max-w-sm w-full shadow-2xl">
+            <div className="w-12 h-12 bg-red-600/10 border border-red-600/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="text-red-500" size={20} />
             </div>
-            <h3 className="text-xl font-black text-white text-center uppercase tracking-tighter">Xác nhận xóa?</h3>
-            <p className="text-zinc-500 text-xs text-center mt-3 leading-relaxed">
-              Dữ liệu của mã <span className="text-white font-bold">{selectedVoucher?.code}</span> sẽ bị xóa vĩnh viễn và không thể khôi phục.
+            <h3 className="text-sm font-black text-white text-center uppercase tracking-tight">Xác nhận xóa dữ liệu?</h3>
+            <p className="text-zinc-500 text-[10px] font-medium text-center mt-2 leading-relaxed uppercase">
+              Mã <span className="text-white font-bold">{selectedVoucher?.code}</span> sẽ bị gỡ bỏ vĩnh viễn khỏi core hệ thống.
             </p>
-            <div className="flex gap-3 mt-8">
+            <div className="flex gap-2 mt-6">
               <button 
                 onClick={() => setDeleteModalOpen(false)} 
-                className="flex-1 py-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-500 text-[10px] font-black uppercase transition-all"
+                className="flex-1 py-2.5 rounded-lg bg-zinc-950 border border-zinc-900 hover:bg-zinc-900 text-zinc-500 text-[9px] font-black uppercase tracking-widest transition-all"
               >
                 Hủy bỏ
               </button>
               <button 
                 onClick={handleDelete} 
                 disabled={isSubmitting}
-                className="flex-1 py-4 rounded-2xl bg-red-600 hover:bg-red-500 text-white text-[10px] font-black uppercase transition-all flex items-center justify-center"
+                className="flex-1 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center"
               >
-                {isSubmitting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Đồng ý xóa"}
+                {isSubmitting ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Xác nhận"}
               </button>
             </div>
           </div>

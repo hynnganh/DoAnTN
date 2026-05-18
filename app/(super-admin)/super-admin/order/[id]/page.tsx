@@ -4,194 +4,224 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   ArrowLeft, Ticket, CreditCard, Clock, Hash, 
-  MapPin, ShoppingBag, Receipt, Zap, Calendar, 
-  CheckCircle2, QrCode, Download, AlertCircle
+  MapPin, ShoppingBag, Calendar, QrCode, Download
 } from 'lucide-react';
-import { apiRequest } from '@/app/lib/api';
+import { apiSuperAdminRequest } from '@/app/lib/api';
 
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [order, setOrder] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [donHang, setDonHang] = useState<any>(null);
+  const [dangTai, setDangTai] = useState(true);
 
   useEffect(() => {
-    const fetchOrderDetail = async () => {
+    const layChiTietDonHang = async () => {
       try {
-        const res = await apiRequest(`/api/v1/orders/${params.id}`);
+        const res = await apiSuperAdminRequest(`/api/v1/orders/${params.id}`);
         if (res.ok) {
           const json = await res.json();
-          setOrder(json.data);
+          setDonHang(json.data);
         }
       } catch (e) {
-        console.error("Lỗi:", e);
+        console.error("Lỗi tải chi tiết đơn hàng:", e);
       } finally {
-        setLoading(false);
+        setDangTai(false);
       }
     };
-    fetchOrderDetail();
+    layChiTietDonHang();
   }, [params.id]);
 
-  // Hàm chuyển đổi trạng thái sang tiếng Việt
-  const getStatusLabel = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case 'SUCCESS': return { label: 'Giao dịch thành công', color: 'text-emerald-500', icon: <CheckCircle2 size={16} /> };
-      case 'PENDING': return { label: 'Đang chờ xử lý', color: 'text-amber-500', icon: <Clock size={16} /> };
-      case 'FAILED': return { label: 'Giao dịch thất bại', color: 'text-red-500', icon: <AlertCircle size={16} /> };
-      default: return { label: status, color: 'text-zinc-400', icon: <Zap size={16} /> };
+  const layTrangThai = (status: string) => {
+    switch (status?.toUpperCase()?.trim()) {
+      case 'SUCCESS': 
+      case 'PAID':
+        return { nhan: 'ĐÃ THANH TOÁN', mau: 'text-emerald-400 bg-emerald-500/5 border-emerald-500/10' };
+      case 'PENDING': 
+        return { nhan: 'CHỜ XỬ LÝ', mau: 'text-amber-400 bg-amber-500/5 border-amber-500/10' };
+      case 'CANCELLED': 
+        return { nhan: 'ĐA HỦY', mau: 'text-rose-500 bg-rose-500/5 border-rose-500/10' };
+      default: 
+        return { nhan: status || 'CHƯA RÕ', mau: 'text-zinc-500 bg-zinc-500/5 border-zinc-500/10' };
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-      <Zap className="text-red-600 animate-pulse" size={40} />
+  if (dangTai) return (
+    <div className="min-h-screen bg-[#060608] flex items-center justify-center">
+      <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
-  if (!order) return <div className="p-20 text-center text-red-600 font-black uppercase tracking-widest italic">Hệ thống: Không tìm thấy dữ liệu</div>;
+  if (!donHang) return (
+    <div className="min-h-screen bg-[#060608] flex items-center justify-center select-none">
+      <div className="text-center text-red-500 font-black uppercase tracking-wider bg-red-500/5 px-5 py-2.5 rounded-xl border border-red-950/40 text-[9px]">
+        Hệ thống: Không tìm thấy dữ liệu đơn hàng
+      </div>
+    </div>
+  );
 
-  const statusInfo = getStatusLabel(order.status);
+  const thongTinTrangThai = layTrangThai(donHang.status);
+  const tongSoLuongVatPham = donHang.orderDetails?.reduce((tong: number, vatPham: any) => tong + (vatPham.quantity || 0), 0) || 0;
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white p-4 md:p-8 font-sans selection:bg-red-600">
+    <div className="min-h-screen bg-[#060608] text-white p-5 font-sans selection:bg-red-600 selection:text-white select-none tracking-tight">
       
-      {/* THANH ĐIỀU HƯỚNG */}
-      <div className="max-w-5xl mx-auto flex justify-between items-center mb-8">
+      {/* THANH ĐIỀU HƯỚNG PHẲNG */}
+      <div className="max-w-5xl mx-auto flex justify-between items-center mb-5 border-b border-zinc-900 pb-3">
         <button 
           onClick={() => router.back()} 
-          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-all bg-zinc-900/50 px-4 py-2 rounded-xl border border-white/5"
+          className="flex items-center gap-1.5 text-zinc-400 hover:text-white transition-all bg-zinc-950 px-3 py-1.5 rounded-xl border border-zinc-900"
         >
-          <ArrowLeft size={16} />
-          <span className="text-[10px] font-[1000] uppercase tracking-tighter">Trở lại bảng điều khiển</span>
+          <ArrowLeft size={12} />
+          <span className="text-[9px] font-black uppercase tracking-wider">Trở lại</span>
         </button>
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest italic">Máy chủ: HCM_D01</span>
-          <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+          <span className="text-[9px] font-black text-zinc-600 uppercase tracking-wider">Máy chủ: HCM_D01</span>
+          <div className="w-1.5 h-1.5 bg-red-600 rounded-full shadow-[0_0_6px_rgba(220,38,38,0.5)]" />
         </div>
       </div>
 
+      {/* BỐ CỤC CHÍNH */}
       <main className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-4">
         
-        {/* Ô 1: THÔNG TIN TỔNG QUÁT */}
-        <div className="md:col-span-7 bg-zinc-950 border border-white/5 rounded-[2.5rem] p-8 relative overflow-hidden flex flex-col justify-between min-h-[300px]">
-          <div className="relative z-10">
-            <p className="text-[10px] font-black text-red-600 uppercase tracking-[0.4em] mb-3 italic underline decoration-2 underline-offset-4">Hồ sơ giao dịch</p>
-            <h1 className="text-6xl font-[1000] italic tracking-tighter uppercase leading-[0.8] mb-2">
-              Chi tiết <br /> <span className="text-white/20">đơn hàng</span>
-            </h1>
-          </div>
+        {/* CỘT TRÁI (7/12) - THÔNG TIN CHI TIẾT ĐƠN HÀNG */}
+        <div className="md:col-span-7 space-y-4">
           
-          <div className="mt-8 flex items-end justify-between relative z-10">
+          {/* HỒ SƠ TỔNG QUÁT */}
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-5 relative overflow-hidden flex flex-col justify-between min-h-[160px] shadow-sm">
             <div>
-              <p className="text-[9px] font-black text-zinc-600 uppercase mb-1 italic tracking-widest">Mã số hóa đơn</p>
-              <p className="text-3xl font-black italic tracking-tighter text-white">#{order.id}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[9px] font-black text-zinc-600 uppercase mb-1 italic tracking-widest">Tổng tiền quyết toán</p>
-              <p className="text-5xl font-[1000] italic text-red-600 tracking-tighter leading-none">
-                {order.totalAmount?.toLocaleString('vi-VN')}đ
+              <p className="text-[9px] font-black text-red-600 uppercase tracking-wider mb-1">
+                HỒ SƠ GIAO DỊCH HỆ THỐNG
               </p>
+              <h1 className="text-3xl font-black uppercase tracking-tight leading-none">
+                Chi tiết <br /><span className="text-zinc-800">đơn hàng</span>
+              </h1>
             </div>
-          </div>
-          <Hash className="absolute -bottom-12 -right-12 text-white/[0.02]" size={280} />
-        </div>
-
-        {/* Ô 2: TRẠNG THÁI & THỜI GIAN */}
-        <div className="md:col-span-5 grid grid-cols-1 gap-4">
-          <div className="bg-zinc-900/30 border border-white/5 rounded-[2.5rem] p-7 flex items-center justify-between group hover:border-white/10 transition-colors">
-             <div>
-                <p className="text-[9px] font-black text-zinc-600 uppercase mb-2 italic tracking-[0.2em]">Trạng thái hệ thống</p>
-                <div className={`flex items-center gap-2 ${statusInfo.color}`}>
-                   {statusInfo.icon}
-                   <span className="font-[1000] italic uppercase text-sm tracking-tight">{statusInfo.label}</span>
-                </div>
-             </div>
-             <QrCode size={40} className="text-white/5 group-hover:text-white/20 transition-all" />
-          </div>
-          
-          <div className="bg-zinc-900/30 border border-white/5 rounded-[2.5rem] p-7">
-             <p className="text-[9px] font-black text-zinc-600 uppercase mb-4 italic tracking-[0.2em]">Thời gian ghi nhận</p>
-             <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                   <div className="p-2 bg-black rounded-lg border border-white/5 text-zinc-500"><Calendar size={14} /></div>
-                   <span className="text-xs font-black uppercase italic text-zinc-300">Ngày: {new Date(order.createdAt).toLocaleDateString('vi-VN')}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                   <div className="p-2 bg-black rounded-lg border border-white/5 text-red-600"><Clock size={14} /></div>
-                   <span className="text-xs font-[1000] italic text-white uppercase">Giờ: {new Date(order.createdAt).toLocaleTimeString('vi-VN')}</span>
-                </div>
-             </div>
-          </div>
-        </div>
-
-        {/* Ô 3: DANH SÁCH MỤC HÀNG */}
-        <div className="md:col-span-8 bg-zinc-950 border border-white/5 rounded-[2.5rem] p-8 md:p-10">
-          <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-600/10 rounded-lg text-red-600"><ShoppingBag size={18} /></div>
-              <h3 className="text-[11px] font-[1000] uppercase tracking-[0.3em] italic text-zinc-400">Danh mục sản phẩm</h3>
+            
+            <div className="flex items-end justify-between relative z-10 mt-4 border-t border-zinc-900/60 pt-3">
+              <div>
+                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-wider mb-0.5">Mã hóa đơn</p>
+                <p className="text-lg font-black text-white tracking-tight">#{donHang.id}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[8px] font-black text-red-500 uppercase tracking-wider mb-0.5">Tổng thanh toán</p>
+                <p className="text-2xl font-black text-red-600 tracking-tight leading-none">
+                  {donHang.totalAmount?.toLocaleString('vi-VN')}đ
+                </p>
+              </div>
             </div>
-            <span className="text-[10px] font-black px-3 py-1 bg-white/5 rounded-full border border-white/10 italic text-zinc-500">
-              {order.orderDetails?.length || 0} mục hàng
-            </span>
+            <Hash className="absolute -bottom-6 -right-6 text-zinc-900/10 pointer-events-none" size={140} />
           </div>
-          
-          <div className="space-y-3 max-h-[420px] overflow-y-auto pr-3 custom-scrollbar">
-            {order.orderDetails?.map((item: any) => (
-              <div key={item.id} className="flex justify-between items-center p-6 bg-zinc-900/10 border border-white/5 rounded-3xl group hover:border-red-600/30 transition-all">
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center border border-white/5 text-red-600 group-hover:scale-105 transition-all">
-                    <Ticket size={24} />
+
+          {/* DANH SÁCH VẬT PHẨM */}
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-3 border-b border-zinc-900 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-red-500"><ShoppingBag size={12} /></div>
+                <h3 className="text-[9px] font-black uppercase tracking-wider text-zinc-400">Danh sách vật phẩm</h3>
+              </div>
+              <span className="text-[8px] font-black px-2 py-0.5 bg-zinc-900 border border-zinc-800 rounded-md text-white tracking-wider">
+                SỐ LƯỢNG: {tongSoLuongVatPham}
+              </span>
+            </div>
+            
+            <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
+              {donHang.orderDetails?.map((vatPham: any) => (
+                <div key={vatPham.id} className="flex justify-between items-center p-3 bg-[#060608] border border-zinc-900 rounded-xl group hover:border-zinc-800 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-zinc-950 rounded-lg flex items-center justify-center border border-zinc-900 text-zinc-500 group-hover:text-red-500 group-hover:border-zinc-800 transition-colors">
+                      <Ticket size={13} />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-tight leading-none mb-1 text-zinc-300 group-hover:text-red-500 transition-colors">
+                        {vatPham.itemType === 'TICKET' ? 'VÉ XEM PHIM' : vatPham.itemType === 'COMBO' ? 'COMBO NƯỚC UỐNG' : vatPham.itemType}
+                      </p>
+                      <p className="text-[8px] font-black text-zinc-500 uppercase tracking-wider">
+                        ĐƠN GIÁ: {vatPham.price?.toLocaleString('vi-VN')}đ
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-base font-[1000] italic uppercase tracking-tighter leading-none mb-2">{item.itemType}</p>
-                    <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest italic">
-                      Đơn giá: {item.price?.toLocaleString('vi-VN')}đ
+                  <div className="text-right">
+                    <p className="text-[8px] font-black text-zinc-500 uppercase">x{vatPham.quantity}</p>
+                    <p className="text-xs font-black text-white tracking-tight">
+                      {((vatPham.price || 0) * (vatPham.quantity || 0)).toLocaleString('vi-VN')}đ
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-black text-zinc-500 mb-1 uppercase tracking-tighter italic">Số lượng: {item.quantity}</p>
-                  <p className="text-xl font-[1000] italic text-white tracking-tighter">{(item.price * item.quantity).toLocaleString('vi-VN')}đ</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+
         </div>
 
-        {/* Ô 4: ĐỊA ĐIỂM & THANH TOÁN */}
-        <div className="md:col-span-4 space-y-4">
-          <div className="bg-red-600 rounded-[2.5rem] p-9 text-black relative overflow-hidden group shadow-2xl shadow-red-600/10">
-            <MapPin className="absolute -top-6 -right-6 text-black/10 group-hover:scale-110 transition-transform duration-700" size={140} />
-            <p className="text-[9px] font-black uppercase mb-3 opacity-60 italic tracking-widest leading-none">Địa điểm thực hiện</p>
-            <h4 className="text-2xl font-[1000] italic uppercase leading-[0.9] tracking-tighter mb-5">{order.cinemaName}</h4>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-black text-white text-[8px] font-black rounded-lg uppercase italic border border-white/10">
-              <Hash size={10} className="text-red-600" /> ID: {order.cinemaItemId}
+        {/* CỘT PHẢI (5/12) - TRẠNG THÁI & HẬU CẦN */}
+        <div className="md:col-span-5 space-y-4">
+          
+          {/* TRẠNG THÁI VẬN HÀNH */}
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-4 flex items-center justify-between group hover:border-zinc-800 transition-all shadow-sm">
+            <div>
+              <p className="text-[8px] font-black text-zinc-500 uppercase mb-1.5 tracking-wider">Trạng thái xử lý</p>
+              <span className={`inline-block text-[9px] font-black uppercase tracking-wider leading-none px-2 py-0.5 rounded border ${thongTinTrangThai.mau}`}>
+                 • {thongTinTrangThai.nhan}
+              </span>
+            </div>
+            <QrCode size={28} className="text-zinc-900 group-hover:text-zinc-800 transition-all" />
+          </div>
+
+          {/* THỜI GIAN GHI NHẬN */}
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-4 shadow-sm">
+            <p className="text-[8px] font-black text-zinc-500 uppercase mb-2.5 tracking-wider">Thời gian ghi nhận</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 p-2 bg-[#060608] border border-zinc-900 rounded-xl">
+                <Calendar size={12} className="text-zinc-500" />
+                <span className="text-[9px] font-black text-zinc-400">
+                  {donHang.createdAt ? new Date(donHang.createdAt).toLocaleDateString('vi-VN') : '---'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 p-2 bg-[#060608] border border-zinc-900 rounded-xl">
+                <Clock size={12} className="text-red-500" />
+                <span className="text-[9px] font-black text-white">
+                  {donHang.createdAt ? new Date(donHang.createdAt).toLocaleTimeString('vi-VN') : '---'}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="bg-zinc-950/50 border border-white/5 rounded-[2.5rem] p-9">
-            <p className="text-[9px] font-black text-zinc-600 uppercase mb-6 italic tracking-widest">Hình thức thanh toán</p>
-            <div className="flex items-center gap-4 p-5 bg-black rounded-3xl border border-white/5 hover:border-white/10 transition-colors">
-              <div className="p-3 bg-zinc-900 rounded-xl text-red-600"><CreditCard size={20} /></div>
-              <div>
-                 <p className="text-sm font-[1000] italic uppercase tracking-tighter leading-none mb-1">{order.paymentMethod}</p>
-                 <p className="text-[8px] font-black text-emerald-500 uppercase italic tracking-widest">Đã bảo mật</p>
-              </div>
+          {/* ĐỊA ĐIỂM THỰC HIỆN */}
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-4 relative overflow-hidden group shadow-sm">
+            <MapPin className="absolute -top-3 -right-3 text-zinc-900/20 group-hover:scale-105 transition-transform duration-500 pointer-events-none" size={80} />
+            <p className="text-[8px] font-black text-red-500 uppercase mb-1 tracking-wider leading-none">Địa điểm áp dụng</p>
+            <h4 className="text-base font-black uppercase leading-tight tracking-tight mb-2 text-white">{donHang.cinemaName || 'Chưa cập nhật rạp'}</h4>
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#060608] text-zinc-400 text-[8px] font-black rounded-md border border-zinc-900">
+              <Hash size={8} className="text-red-500" /> ID: {donHang.cinemaItemId || 'N/A'}
             </div>
-            <button className="w-full mt-6 py-5 bg-white text-black rounded-3xl text-[11px] font-[1000] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-red-600 hover:text-white transition-all active:scale-95 shadow-xl shadow-white/5">
-              <Download size={16} /> Xuất hóa đơn số
+          </div>
+
+          {/* PHƯƠNG THỨC THANH TOÁN & BUTTON */}
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[8px] font-black text-zinc-500 uppercase tracking-wider">Phương thức thanh toán</p>
+              <span className="text-[8px] font-black text-red-500 bg-red-500/5 border border-red-950/40 px-1.5 py-0.5 rounded uppercase">BẢO MẬT</span>
+            </div>
+            
+            <div className="flex items-center gap-2.5 p-2.5 bg-[#060608] rounded-xl border border-zinc-900">
+              <div className="p-1.5 bg-zinc-950 rounded-lg text-red-500 border border-zinc-900"><CreditCard size={12} /></div>
+              <p className="text-[11px] font-black uppercase tracking-tight text-white">{donHang.paymentMethod || 'Không rõ'}</p>
+            </div>
+            
+            <button className="w-full h-10 bg-zinc-950 border border-zinc-900 text-zinc-400 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all active:scale-98 hover:bg-red-600 hover:text-white hover:border-transparent shadow-sm">
+              <Download size={12} /> Xuất hóa đơn
             </button>
           </div>
+
         </div>
 
       </main>
 
       <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #ef4444; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #18181b; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #dc2626; }
       `}</style>
     </div>
   );

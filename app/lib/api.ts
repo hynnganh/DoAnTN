@@ -28,8 +28,7 @@ export async function apiAdminRequest(
   endpoint: string,
   options: RequestInit = {}
 ) {
-  let token = getTokenByRole("ADMIN"); // Ép hệ thống lấy token admin trước
-
+  let token = getTokenByRole("ADMIN");
   // Dự phòng cứu cánh nếu hàm trên không ra token (do cơ chế lưu trữ phía client)
   if (!token && typeof window !== "undefined") {
     token = localStorage.getItem("token_admin") || localStorage.getItem("token");
