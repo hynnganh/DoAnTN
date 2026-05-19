@@ -1,21 +1,30 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Sparkles, Loader2, X, Plus, Utensils, Star } from 'lucide-react';
+import { Loader2, X, Flame, Utensils, Star, Layers } from 'lucide-react';
 import { apiRequest } from '../../lib/api';
 
+interface ComboItem {
+  id: number;
+  name: string;
+  price: number;
+  imageUrl: string;
+  description?: string;
+}
+
 export default function ComboDealsSection() {
-  const [combos, setCombos] = useState<any[]>([]);
+  const [combos, setCombos] = useState<ComboItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCombo, setSelectedCombo] = useState<any>(null);
+  const [selectedCombo, setSelectedCombo] = useState<ComboItem | null>(null);
 
   useEffect(() => {
     const fetchCombos = async () => {
       try {
         const res = await apiRequest('/api/v1/combos');
         const resData = await res.json();
-        if (res.ok) setCombos(resData.data || []);
+        const targetData = resData.data || resData;
+        if (res.ok) setCombos(Array.isArray(targetData) ? targetData : []);
       } catch (error) {
-        console.error("Lỗi:", error);
+        console.error("Lỗi tải danh sách Combo:", error);
       } finally {
         setLoading(false);
       }
@@ -26,132 +35,124 @@ export default function ComboDealsSection() {
   const formatPrice = (price: number) => new Intl.NumberFormat('vi-VN').format(price);
 
   if (loading) return (
-    <div className="py-24 flex flex-col items-center justify-center bg-[#050505]">
-      <Loader2 className="animate-spin text-red-600 mb-4" size={32} />
-      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-600">Loading Menu...</span>
+    <div className="py-12 flex flex-col items-center justify-center bg-[#050505]">
+      <Loader2 className="animate-spin text-red-600 mb-2" size={24} />
+      <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-600">Đang chuẩn bị...</span>
     </div>
   );
 
   return (
-    <section className="bg-[#050505] py-24 px-6 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-red-600/5 blur-[120px] rounded-full pointer-events-none" />
-      
+    <section className="bg-[#050505] py-8 px-4 text-white">
       <div className="max-w-[1200px] mx-auto">
-        {/* Header */}
-        <div className="relative mb-16 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-red-500">
-              <Star size={14} fill="currentColor" />
-              <span className="text-[10px] font-black uppercase tracking-[0.5em]">Premium Selection</span>
-            </div>
-            <h2 className="text-5xl md:text-7xl font-[1000] italic uppercase tracking-tighter text-white leading-none">
-              Combo <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-400">Pops</span>
-            </h2>
-          </div>
-          <p className="max-w-[280px] text-[11px] font-bold text-zinc-500 uppercase tracking-widest leading-relaxed border-l border-white/10 pl-6">
-            Sự kết hợp hoàn hảo giữa vị giác và thị giác cho buổi xem phim của bặn.
-          </p>
+        
+        {/* --- HEADER ĐỒNG BỘ THEO DESIGN SYSTEM --- */}
+        <div className="mb-6 border-l-[3px] border-red-600 pl-3">
+          <h2 className="text-2xl font-black uppercase tracking-wide leading-none">
+            COMBO <span className="text-red-600">&</span> BẮP NƯỚC
+          </h2>
+          <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest block mt-1">
+            A&K CINEMA EXCLUSIVE
+          </span>
         </div>
 
-        {/* --- MINI GRID --- */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {combos.map((item) => (
-            <div 
-              key={item.id} 
-              onClick={() => setSelectedCombo(item)}
-              className="group cursor-pointer"
-            >
-              <div className="relative aspect-[4/5] rounded-[2.5rem] overflow-hidden bg-zinc-900 border border-white/5 transition-all duration-500 group-hover:border-red-600/50 group-hover:shadow-[0_0_40px_rgba(220,38,38,0.15)]">
-                <img 
-                  src={item.imageUrl} 
-                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
-                  alt={item.name} 
-                />
-                {/* Glass Tag */}
-                <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/40 backdrop-blur-md border border-white/10 rounded-full">
-                   <span className="text-[10px] font-black text-white italic">{formatPrice(item.price)}đ</span>
+        {/* --- LƯỚI CARD THU NHỎ SIÊU GỌN --- */}
+        {combos.length === 0 ? (
+          <div className="text-center py-6 text-zinc-600 text-[10px] uppercase tracking-widest font-mono">Thực đơn đang được cập nhật</div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {combos.map((item) => (
+              <div 
+                key={item.id}
+                className="bg-[#0d0d0d] border border-zinc-900 rounded-xl p-3 flex flex-col justify-between transition-all duration-300 hover:border-zinc-800"
+              >
+                <div>
+                  {/* Khung ảnh bo góc nhẹ giống mục sự kiện */}
+                  <div className="relative aspect-[16/10] rounded-lg overflow-hidden bg-zinc-900 border border-white/5">
+                    <img 
+                      src={item.imageUrl} 
+                      className="w-full h-full object-cover opacity-95" 
+                      alt={item.name} 
+                    />
+                    {/* Tag giá mini đè góc ảnh */}
+                    <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/80 backdrop-blur-sm rounded border border-white/10">
+                      <span className="text-[10px] font-bold text-red-500 font-mono">{formatPrice(item.price)}đ</span>
+                    </div>
+                  </div>
+
+                  {/* Nhãn nhỏ */}
+                  <span className="text-[8px] font-bold text-red-500 uppercase tracking-wider block mt-3 mb-1">
+                    — QUẦY PHỤC VỤ
+                  </span>
+
+                  {/* Tên Combo dạng Chữ in hoa vuông vức */}
+                  <h4 className="text-xs font-black uppercase tracking-wide text-zinc-200 line-clamp-1">
+                    {item.name}
+                  </h4>
+                  
+                  {/* Mô tả ngắn gọn dòng dưới */}
+                  <p className="text-[10px] text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
+                    {item.description || "Khẩu phần bắp nước tiêu chuẩn chuẩn bị nóng hổi."}
+                  </p>
                 </div>
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-red-600/80 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center">
-                   <Plus size={40} className="text-white transform scale-50 group-hover:scale-100 transition-transform duration-500" />
-                </div>
+
+                {/* Nút bấm Xem chi tiết phẳng dẹt */}
+                <button
+                  onClick={() => setSelectedCombo(item)}
+                  className="w-full mt-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-[10px] font-bold uppercase tracking-wider rounded-md border border-zinc-800 transition-colors flex items-center justify-center gap-1"
+                >
+                  Chi tiết <span>›</span>
+                </button>
               </div>
-              <h4 className="mt-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 group-hover:text-red-500 transition-colors">
-                {item.name}
-              </h4>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* --- ELITE MODAL --- */}
+      {/* --- CỬA SỔ MINI MODAL --- */}
       {selectedCombo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl animate-in fade-in duration-500">
-          <div className="relative w-full max-w-4xl bg-zinc-950 border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row animate-in slide-in-from-bottom-8 duration-700">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="relative w-full max-w-sm bg-[#0d0d0d] border border-zinc-800 rounded-xl overflow-hidden p-4 shadow-2xl animate-in slide-in-from-bottom-2">
             
-            {/* Close Button */}
             <button 
               onClick={() => setSelectedCombo(null)}
-              className="absolute top-6 right-6 z-20 p-3 bg-zinc-900 hover:bg-red-600 text-white rounded-full transition-all duration-300"
+              className="absolute top-3 right-3 p-1 bg-zinc-900 hover:bg-red-600 text-zinc-400 hover:text-white rounded transition-colors"
             >
-              <X size={20} />
+              <X size={12} />
             </button>
 
-            {/* Left: Cinematic Image */}
-            <div className="w-full md:w-[45%] relative group">
-              <img src={selectedCombo.imageUrl} className="w-full h-full object-cover" alt="" />
-              <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-transparent to-transparent hidden md:block" />
-            </div>
-
-            {/* Right: Info Section */}
-            <div className="w-full md:w-[55%] p-10 md:p-16 flex flex-col justify-center">
-              <div className="space-y-8">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 text-red-600">
-                    <Utensils size={18} />
-                    <div className="h-[1px] w-12 bg-red-600/30" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.4em]">Detail Menu</span>
-                  </div>
-                  <h3 className="text-5xl md:text-6xl font-[1000] italic uppercase tracking-tighter text-white leading-none">
-                    {selectedCombo.name}
-                  </h3>
-                </div>
-
-                <p className="text-sm text-zinc-500 leading-relaxed font-medium italic">
-                  "{selectedCombo.description || "Một sự kết hợp tuyệt vời dành cho những tín đồ điện ảnh đích thực, mang lại hương vị khó quên."}"
-                </p>
-
-                <div className="grid grid-cols-2 gap-8 py-8 border-y border-white/5">
-                  <div>
-                    <span className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2">Giá ưu đãi</span>
-                    <span className="text-4xl font-black text-white italic tracking-tighter">
-                      {formatPrice(selectedCombo.price)}<span className="text-sm text-red-600 ml-1">đ</span>
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2">Trạng thái</span>
-                    <span className="inline-flex items-center gap-2 text-[10px] font-black text-green-500 uppercase tracking-widest px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                      Sẵn sàng
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <button 
-                    onClick={() => setSelectedCombo(null)}
-                    className="flex-1 py-5 bg-white text-black rounded-2xl font-[1000] uppercase text-[11px] tracking-[0.2em] hover:bg-red-600 hover:text-white transition-all duration-500 active:scale-95 shadow-xl"
-                  >
-                    Thưởng thức ngay
-                  </button>
-                </div>
+            <div className="space-y-3">
+              <div className="w-full h-32 rounded-lg overflow-hidden bg-zinc-900 border border-white/5">
+                <img src={selectedCombo.imageUrl} className="w-full h-full object-cover" alt="" />
               </div>
-            </div>
-            
-            {/* Bottom Watermark */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 md:left-auto md:right-16 md:translate-x-0 opacity-10">
-               <span className="text-4xl font-black italic text-white tracking-tighter">A&K CINEMA</span>
+
+              <div className="space-y-1">
+                <span className="text-[8px] font-bold text-red-500 uppercase tracking-wider block">— CHI TIẾT THỰC ĐƠN</span>
+                <h3 className="text-sm font-black uppercase tracking-wide text-white">
+                  {selectedCombo.name}
+                </h3>
+                <p className="text-[11px] text-zinc-400 leading-normal bg-zinc-950 p-2.5 rounded border border-zinc-900 italic">
+                  {selectedCombo.description || "Sự kết hợp hoàn hảo giữa bắp rang thơm lừng cùng thức uống giải khát mát lạnh tại quầy."}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-zinc-900">
+                <div>
+                  <span className="block text-[8px] font-bold text-zinc-500 uppercase tracking-wider">GIÁ COMBO</span>
+                  <span className="text-base font-black text-white font-mono">
+                    {formatPrice(selectedCombo.price)}<span className="text-[10px] text-red-500 font-bold ml-0.5">đ</span>
+                  </span>
+                </div>
+                <span className="inline-flex items-center gap-1 text-[8px] font-bold text-orange-400 uppercase tracking-wider px-2 py-0.5 bg-orange-500/5 rounded border border-orange-500/10">
+                  Phục vụ ngay
+                </span>
+              </div>
+
+              <button 
+                onClick={() => setSelectedCombo(null)}
+                className="w-full py-2 bg-zinc-900 hover:bg-white text-zinc-400 hover:text-black rounded font-bold uppercase text-[9px] tracking-wider border border-zinc-800 transition-all duration-200"
+              >
+                Quay lại danh sách
+              </button>
             </div>
           </div>
         </div>

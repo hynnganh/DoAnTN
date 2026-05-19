@@ -64,7 +64,7 @@ export default function MovieSection() {
           </div>
         </div>
         
-        <Link href="/movies/top-rated" className="block">
+        <Link href="/movies/now" className="block">
           <button className="group flex items-center gap-1.5 text-zinc-500 hover:text-white transition-all duration-300 font-bold text-[10px] uppercase tracking-widest">
             Xem tất cả 
             <ChevronRight size={12} className="group-hover:translate-x-0.5 transition-transform text-orange-500" />

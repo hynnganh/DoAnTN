@@ -5,7 +5,7 @@ import {
   ChevronLeft, Ticket, Coffee, Calendar, 
   CheckCircle2, Loader2, Building2, Clock, Sparkles, AlertTriangle
 } from 'lucide-react';
-import { apiRequest } from '@/app/lib/api';
+import { apiAdminRequest } from '@/app/lib/api';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function OrderDetailPage() {
@@ -33,7 +33,7 @@ export default function OrderDetailPage() {
       setLoading(true);
       const token = getAdminToken();
       
-      const res = await apiRequest(`/api/v1/orders/${id}`, {
+      const res = await apiAdminRequest(`/api/v1/orders/${id}`, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -62,7 +62,7 @@ export default function OrderDetailPage() {
     try {
       const token = getAdminToken();
 
-      const res = await apiRequest(`/api/v1/orders/${id}/status?status=${confirmModal.status}`, {
+      const res = await apiAdminRequest(`/api/v1/orders/${id}/status?status=${confirmModal.status}`, {
         method: 'PUT',
         headers: { 
           "Authorization": `Bearer ${token}`,

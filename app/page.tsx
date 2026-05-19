@@ -1,4 +1,4 @@
-import Banner from "./(client)/components/home/Banner";
+import PostSection from "./(client)/components/home/PostSection";
 import MovieSection from "./(client)/components/home/MovieSection";
 import HeroSection from "./(client)/components/home/HeroSection";
 import TopBanner from "./(client)/components/TopBanner";
@@ -14,6 +14,7 @@ export default function Home() {
       <Navbar />
       <HeroSection />
       <MovieSection />
+      <PostSection />
       <Footer />
     </>
   );
