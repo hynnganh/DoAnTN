@@ -9,7 +9,8 @@ import {
   LogOut, 
   ShoppingBag,
   Film,
-  ChevronRight
+  ChevronRight,
+  QrCode // 🔥 THÊM MỚI: Import icon QrCode xịn sò ở đây
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -27,6 +28,8 @@ export default function AdminSidebar() {
     { name: 'Quản lý Đơn hàng', icon: Ticket, href: '/admin/orders' }, 
     { name: 'Quản lý Combo', icon: ShoppingBag, href: '/admin/combos' },
     { name: 'Khách hàng', icon: Users, href: '/admin/users' },
+    // 🔥 THÊM MỚI: Mục quét mã QR dành cho nhân viên tại quầy soát vé
+    { name: 'Quét mã QR', icon: QrCode, href: '/admin/scanner' }, 
   ];
 
   const xuLyDangXuat = () => {

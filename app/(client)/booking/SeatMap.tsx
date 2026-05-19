@@ -15,7 +15,7 @@ export interface SeatType {
 }
 
 interface SeatMapProps {
-  dbSeats: SeatType[];
+  dbSeats: any[]; // Để any[] nhằm tiếp nhận linh hoạt cấu trúc thô từ API
   selectedSeats: SeatType[];
   onToggleSeat: (seat: SeatType) => void;
 }
@@ -23,19 +23,33 @@ interface SeatMapProps {
 const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: SeatMapProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 1. Trích xuất danh sách hàng ghế độc nhất (A, B, C...) và sắp xếp thứ tự
-  const uniqueRows = useMemo(() => 
-    Array.from(new Set(dbSeats.map(s => s.seatRow))).sort(), 
-    [dbSeats]
-  );
-  
-  // 2. Tìm số ghế lớn nhất để thiết lập ma trận bao bọc Grid rạp phim
-  const maxSeatsInRow = useMemo(() => 
-    Math.max(...dbSeats.map(s => parseInt(s.seatNumber) || 0), 0), 
-    [dbSeats]
-  );
+  // 🔥 BƯỚC THẦN THÁNH: Chuẩn hóa dữ liệu, chấp nhận cả camelCase lẫn snake_case từ Backend
+  const normalizedSeats = useMemo(() => {
+    if (!Array.isArray(dbSeats)) return [];
+    return dbSeats.map(s => ({
+      id: s.id,
+      seatRow: s.seatRow || s.seat_row || "",
+      seatNumber: String(s.seatNumber || s.seat_with_number || s.seat_number || ""),
+      status: s.status || "AVAILABLE",
+      seatType: s.seatType || s.seat_type || "NORMAL",
+      name: s.name || "",
+      price: s.price || 0
+    }));
+  }, [dbSeats]);
 
-  // 3. Callback đồng bộ tính toán ma trận ma sát phục vụ tính năng Zoom mượt mà
+  // 1. Trích xuất danh sách hàng ghế độc nhất (A, B, C...) và sắp xếp thứ tự từ mảng đã chuẩn hóa
+  const uniqueRows = useMemo(() => {
+    const rows = normalizedSeats.map(s => s.seatRow).filter(row => row !== "");
+    return Array.from(new Set(rows)).sort();
+  }, [normalizedSeats]);
+  
+  // 2. Tìm số ghế lớn nhất an toàn (Chống dính lỗi toán học NaN)
+  const maxSeatsInRow = useMemo(() => {
+    const numbers = normalizedSeats.map(s => parseInt(s.seatNumber) || 0);
+    return numbers.length > 0 ? Math.max(...numbers, 0) : 0;
+  }, [normalizedSeats]);
+
+  // 3. Callback phục vụ tính năng Zoom mượt mà
   const onUpdate = useCallback(({ x, y, scale }: any) => {
     if (containerRef.current) {
       const value = make3dTransformValue({ x, y, scale });
@@ -44,7 +58,7 @@ const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: SeatMapProp
   }, []);
 
   return (
-    <div className="w-full h-full min-h-[800px] relative bg-[#010101] overflow-hidden p-4 md:p-5">
+    <div className="w-full h-full min-h-[600px] relative bg-[#010101] overflow-hidden p-4 md:p-5">
       <Toaster position="top-center" reverseOrder={false} />
       
       <QuickPinchZoom 
@@ -74,7 +88,8 @@ const SeatMap = ({ dbSeats = [], selectedSeats = [], onToggleSeat }: SeatMapProp
                 <div className="flex gap-2.5">
                   {Array.from({ length: maxSeatsInRow }, (_, i) => {
                     const currentNum = i + 1;
-                    const seatData = dbSeats.find(s => s.seatRow === rowName && parseInt(s.seatNumber) === currentNum);
+                    // Dò tìm dựa trên mảng data sạch normalizedSeats
+                    const seatData = normalizedSeats.find(s => s.seatRow === rowName && parseInt(s.seatNumber) === currentNum);
                     
                     if (!seatData) return <div key={i} className="w-9 h-9 opacity-0" />;
 
